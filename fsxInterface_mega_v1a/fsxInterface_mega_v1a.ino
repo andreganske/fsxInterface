@@ -109,6 +109,8 @@ String nav1,
        nav2sbold,
        apActive,
        apActiveOld,
+       apvs,
+       apvsold,
        machIas,
        machIasOld,
        altLock,
@@ -253,9 +255,9 @@ void loop() {
  
 // Get a character from the serial buffer
 char getChar() {
-  while(Serial.available() == 0);// wait for data
-  return((char)Serial.read());// Thanks Doug
-}//end of getchar
+  while(Serial.available() == 0);  // wait for data
+  return((char)Serial.read());     // Thanks Doug
+}
  
 /******************************************************************************************************************/
 // The first identifier was "?"
@@ -322,6 +324,80 @@ void QUESTION(){
         digitalWrite(59, LOW);
       }
     break;
+    
+    // Found the reading "autopilot heading set"
+    case 'r':
+      delay (11); // It seems to need a delay here
+      aphdgset = "";
+      aphdgset +=(char)Serial.read();
+      aphdgset += (char)Serial.read();
+      aphdgset += (char)Serial.read();
+
+      if (aphdgset != aphdgsetold) {  // checks to see if its different to the "old" reading
+        aphdgsetold = aphdgset; // Writes the current reading to the "old" string.
+      } 
+    break;
+    
+    // Found AP ACTIVE
+    case 'b':
+      delay(11);
+      apActive = "";
+      apActive += (char)Serial.read();
+      if(apActive != apActiveOld){
+        if(apActive == "1")
+          digitalWrite(7, HIGH);
+        if(apActive == "0")
+          digitalWrite(7, LOW);
+      }
+      apActiveOld = apActive; 
+    break;
+    
+    // found AP Airspeed
+    case 'u':
+      delay (11);
+      apairspeed ="";
+      apairspeed += (char)Serial.read();
+      apairspeed += (char)Serial.read();
+      apairspeed += (char)Serial.read();
+
+      if (apairspeed != apairspeedold){
+        apairspeedold = apairspeed;
+      }   
+    break;
+    
+    // found AP Vertical Speed set
+    case 'q':
+      delay (11);
+      apvs ="";
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+
+      if (apvs != apvsold){
+        apvsold = apvs;
+      }  
+    break;
+    
+    // found AP Alt
+    case 'p':
+      delay (11);
+      apalt = "";
+      apalt += (char)Serial.read();
+      apalt += (char)Serial.read();
+      apalt += (char)Serial.read();
+      //apalt += (char)Serial.read(); // if you want the trailering zero's, uncomment these lines
+      //apalt += (char)Serial.read();
+
+      if (apalt != apaltold){
+        apaltold = apalt;
+      }
+    break;
+    
+    case 'x':
+    break;
+    
   }
    // end of question void 
 }
