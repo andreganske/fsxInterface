@@ -15,21 +15,20 @@
  */
 
 #include "math.h"
-#include "Quadrature.h" // rotary encoders library
 #include <Wire.h>
 
-/* TM1637 lcds library
-You can get this library here:
-http:\\github.com\ */
+// Rotary encoders library, you can get some great stuff about here: http://www.jimspage.co.nz/encoders2.htm
+#include "Quadrature.h"
+
+// TM1637 lcds library, you can get this library here: http://www.seeedstudio.com/wiki/Grove_-_4-Digit_Display
 #include "TM1637.h"
 
-/* Get the LCD I2C Library here: 
-   https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads
-   Move any other LCD libraries to another folder or delete them
-   See Library "Docs" folder for possible commands etc.*/
+// Get the LCD I2C library here: https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads
 #include <LiquidCrystal_I2C.h>
 
 /****************************************************************************************/
+// Defining some stuff
+
 #define ON 1
 #define OFF 0
 
@@ -37,12 +36,11 @@ int8_t Disp_alt[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_spd[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_hdg[] = {0x00,0x00,0x00,0x00};
 
-#define CLK 2//pins definitions for TM1637 and can be changed to other ports    
+//pins definitions for TM1637 and can be changed to other ports
+#define CLK 2
 #define DIO_alt 3
 #define DIO_spd 4
 #define DIO_hdg 5
-
-/****************************************************************************************/
 
 // set the LCD address to 0x27 for a 20 chars 4 line display
 // Set the pins on the I2C chip used for LCD connections:
@@ -60,24 +58,26 @@ TM1637 tm1637_alt(CLK, DIO_alt);
 TM1637 tm1637_spd(CLK, DIO_spd);
 TM1637 tm1637_hdg(CLK, DIO_hdg);
 
-int CodeIn;// used on all serial reads
-int X;// a rotary variable
-int Xold;// the old reading
-int Xdif;// the difference since last loop
-int active; // the mode thats active
+int CodeIn;       // used on all serial reads
+int X;            // a rotary variable
+int Xold;         // the old reading
+int Xdif;         // the difference since last loop
+int active;       // the mode thats active
 int activeold;
-int mark; // shows where the cursor is in the likes of ADF etc
-int pulseOn = 0;// the loop that pulses the LED's
+int mark;         // shows where the cursor is in the likes of ADF etc
+int pulseOn = 0;  // the loop that pulses the LED's
 
-unsigned long TimeStart = 0; //used in pulsing LED's
+unsigned long TimeStart = 0; // used in pulsing LED's
 unsigned long TimeNow = 0;
 unsigned long TimeInterval = 500;
 
+long AltPosition = -999,
+     HdgPosition = -999,
+     SpdPosition = -999;
+
 String oldpinStateSTR,
        pinStateSTR, 
-       pinStateString, 
-       APsp,
-       APspold,
+       pinStateString,
        stringnewstate,
        stringoldstate,
        com1,
@@ -88,10 +88,16 @@ String oldpinStateSTR,
        com2old,
        com2sb,
        com2sbold,
-       airsp,
-       airspold,
-       altit,
-       altitold;
+       aphdgset,
+       aphdgsetold,
+       output,
+       outputold,
+       apalt,
+       apaltold,
+       apairspeed,
+       apairspeedold,
+       apmachset,
+       apmachsetold;
        
 String nav1,
        nav1old,
@@ -100,7 +106,17 @@ String nav1,
        nav2,
        nav2old,
        nav2sb,
-       nav2sbold;
+       nav2sbold,
+       apActive,
+       apActiveOld,
+       machIas,
+       machIasOld,
+       altLock,
+       altLockOld,
+       headingLock,
+       headingLockOld,
+       atArmed,
+       atArmedOld;
        
 String adf,
        adfold,
@@ -157,13 +173,16 @@ void welcomeMessages() {
     i++;
 
   } while (i < 10);
-
-  tm1637_alt.clear();
-  tm1637_spd.clear();
-  tm1637_hdg.clear();
+  
+  delay(1000);
 
   lcd.clear();
   lcd.print("Initializing...");
+  
+  tm1637_alt.clearDisplay();
+  tm1637_spd.clearDisplay();
+  tm1637_hdg.clearDisplay();
+  lcd.clear();
 }
 
 void setup() {
@@ -177,17 +196,14 @@ void setup() {
   tm1637_spd.init();
   tm1637_hdg.init();
 
-  // initialize timer  
-  Timer1.initialize(500000);//timing for 500ms
-  Timer1.attachInterrupt(TimingISR);//declare the interrupt serve routine:TimingISR  
-
   // initialize the lcd for 16 chars 2 lines, turn on backlight
   lcd.begin(16,2);
   lcd.backlight();
 
   // just to show something
   welcomeMessages();
- 
+  
+  Serial.begin(115200);
   stringoldstate = "111111111111111111111111111111111111111111111111111111111111111111111";
     
   // setup the input pins 
@@ -199,10 +215,11 @@ void setup() {
   // Get all the OUTPUT pins ready.
   for (int PinNo = 54; PinNo <= 69; PinNo++) {
     pinMode(PinNo, OUTPUT);
+    digitalWrite(PinNo, LOW);
   }
   
   mark = 10;
-  Serial.begin(115200);
+  Serial.flush();
 }
 
 /******************************************************************************************************************/
@@ -994,49 +1011,5 @@ void PULSE_LEDs(){ // This void pulses the active LED's after pressing the 'Canc
 }// end of pulse_led's void
 
 /******************************************************************************************************************/
-void TimingISR() {
-  halfsecond ++;
-  Update = ON;
 
-  if(halfsecond == 2){
-    second ++;
-    
-    if(second == 60) {
-      minute ++;
-      
-      if(minute == 60) {
-        hour ++;
-        
-        if(hour == 24) {
-          hour = 0;
-        }
-        minute = 0;
-      }
-      second = 0;
-    }
-    halfsecond = 0;  
-  }
-
-  // Serial.println(second);
-  ClockPoint = (~ClockPoint) & 0x01;
-}
-
-/******************************************************************************************************************/
-void TimeUpdate(void) {
-  if(ClockPoint) {
-    tm1637a.point(POINT_ON);
-    tm1637b.point(POINT_ON);
-  } else {
-    tm1637a.point(POINT_OFF);
-    tm1637b.point(POINT_OFF);
-  }
-  
-  TimeDisp[0] = hour / 10;
-  TimeDisp[1] = hour % 10;
-  TimeDisp[2] = minute / 10;
-  TimeDisp[3] = minute % 10;
-  Update = OFF;
-}
-
-/******************************************************************************************************************/
 
