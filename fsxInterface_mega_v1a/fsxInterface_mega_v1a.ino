@@ -9,7 +9,7 @@
  Once you get it going you may be able to remove some DELAY's
  
  **************************************************************
- This sketch was modified by Andre Ganske
+ This sketch was modified by Andre Ganske | @andreganske
  * include support to i2c LCD module
  * include support to TM1637 lcds modules
  */
@@ -35,12 +35,13 @@
 int8_t Disp_alt[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_spd[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_hdg[] = {0x00,0x00,0x00,0x00};
+int8_t Disp_clock[] = {0x00,0x00,0x00,0x00};
 
-//pins definitions for TM1637 and can be changed to other ports
 #define CLK 2
 #define DIO_alt 3
 #define DIO_spd 4
 #define DIO_hdg 5
+#define DIO_clk 6
 
 // set the LCD address to 0x27 for a 20 chars 4 line display
 // Set the pins on the I2C chip used for LCD connections:
@@ -48,7 +49,7 @@ int8_t Disp_hdg[] = {0x00,0x00,0x00,0x00};
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 
 // Defining rotary encoders pins
-Quadrature quad1(8, 9);
+Quadrature QUAD_radio(8, 9);
 Quadrature QUAD_alt(48, 49);
 Quadrature QUAD_spd(50, 51);
 Quadrature QUAD_hdg(52, 53);
@@ -57,6 +58,7 @@ Quadrature QUAD_hdg(52, 53);
 TM1637 tm1637_alt(CLK, DIO_alt);
 TM1637 tm1637_spd(CLK, DIO_spd);
 TM1637 tm1637_hdg(CLK, DIO_hdg);
+TM1637 tm1637_clk(CLK, DIO_clk);
 
 int CodeIn;       // used on all serial reads
 int X;            // a rotary variable
@@ -165,18 +167,23 @@ void welcomeMessages() {
     Disp_alt[0] = Disp_alt[1] = Disp_alt[2] = Disp_alt[3] = i;
     Disp_spd[0] = Disp_spd[1] = Disp_spd[2] = Disp_spd[3] = i;
     Disp_hdg[0] = Disp_hdg[1] = Disp_hdg[2] = Disp_hdg[3] = i;
+    Disp_clk[0] = Disp_clk[1] = Disp_clk[2] = Disp_clk[3] = i;
 
     tm1637_alt.display(Disp_alt);
     tm1637_spd.display(Disp_spd);
     tm1637_hdg.display(Disp_hdg);
+    tm1637_clk.display(Disp_clk);
 
     delay(100);
 
     i++;
 
   } while (i < 10);
-  
-  delay(1000);
+
+  tm1637_alt.clear();
+  tm1637_spd.clear();
+  tm1637_hdg.clear();
+  tm1637_clk.clear();
 
   lcd.clear();
   lcd.print("Initializing...");
@@ -193,10 +200,12 @@ void setup() {
   tm1637_alt.set();
   tm1637_spd.set();
   tm1637_hdg.set();
+  tm1637_clk.set();
 
   tm1637_alt.init();
   tm1637_spd.init();
   tm1637_hdg.init();
+  tm1637_clk.init();
 
   // initialize the lcd for 16 chars 2 lines, turn on backlight
   lcd.begin(16,2);
@@ -238,18 +247,18 @@ void loop() {
     CodeIn = getChar();
     
     if (CodeIn == '=') {
-      EQUALS();
-    }// The first identifier is "="
+    	EQUALS(); // The first identifier is "="
+    }
 
     if (CodeIn == '?') {
-      QUESTION();
-    }// The first identifier is "?"
+    	QUESTION(); // The first identifier is "?"
+    }
 
     if (CodeIn == '/') {
-      SLASH();
-    }// The first identifier is "/" (Annunciators)
-  } // end of serial available
-}// end of void loop
+    	SLASH(); // The first identifier is "/" (Annunciators)
+    }
+  }
+}
 
 /******************************************************************************************************************/
  
@@ -837,7 +846,7 @@ void EQUALS(){      // The first identifier was "="
 // now the bit for the rotary encoder input
 void ROTARYS() {
   
-  X = (quad1.position()/2);
+  X = (QUAD_radio.position()/2);
   if (X != Xold) { // checks to see if it different
     (Xdif = (X-Xold));// finds out the difference
  
@@ -988,11 +997,11 @@ void ROTARYS() {
       }    
     }
 
-    if (quad1.position() > 1000){ // zero the rotary encoder count if too high or low
-      quad1.position(0);
+    if (QUAD_radio.position() > 1000){ // zero the rotary encoder count if too high or low
+      QUAD_radio.position(0);
     }
-    if (quad1.position() < -1000){
-      quad1.position(0);
+    if (QUAD_radio.position() < -1000){
+      QUAD_radio.position(0);
     }
     Xold = X; // overwrites the old reading with the new one.
     }
