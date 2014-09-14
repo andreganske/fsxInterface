@@ -15,13 +15,20 @@
  */
 
 #include "math.h"
-#include "Quadrature.h"
-#include "Wire.h"
+#include <Wire.h>
 
+// Rotary encoders library, you can get some great stuff about here: http://www.jimspage.co.nz/encoders2.htm
+#include "Quadrature.h"
+
+// TM1637 lcds library, you can get this library here: http://www.seeedstudio.com/wiki/Grove_-_4-Digit_Display
 #include "TM1637.h"
-#include "LiquidCrystal_I2C.h"
+
+// Get the LCD I2C library here: https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads
+#include <LiquidCrystal_I2C.h>
 
 /****************************************************************************************/
+// Defining some stuff
+
 #define ON 1
 #define OFF 0
 
@@ -35,8 +42,6 @@ int8_t Disp_clock[] = {0x00,0x00,0x00,0x00};
 #define DIO_spd 4
 #define DIO_hdg 5
 #define DIO_clk 6
-
-/****************************************************************************************/
 
 // set the LCD address to 0x27 for a 20 chars 4 line display
 // Set the pins on the I2C chip used for LCD connections:
@@ -55,24 +60,26 @@ TM1637 tm1637_spd(CLK, DIO_spd);
 TM1637 tm1637_hdg(CLK, DIO_hdg);
 TM1637 tm1637_clk(CLK, DIO_clk);
 
-int CodeIn;// used on all serial reads
-int X;// a rotary variable
-int Xold;// the old reading
-int Xdif;// the difference since last loop
-int active; // the mode thats active
+int CodeIn;       // used on all serial reads
+int X;            // a rotary variable
+int Xold;         // the old reading
+int Xdif;         // the difference since last loop
+int active;       // the mode thats active
 int activeold;
-int mark; // shows where the cursor is in the likes of ADF etc
-int pulseOn = 0;// the loop that pulses the LED's
+int mark;         // shows where the cursor is in the likes of ADF etc
+int pulseOn = 0;  // the loop that pulses the LED's
 
-unsigned long TimeStart = 0; //used in pulsing LED's
+unsigned long TimeStart = 0; // used in pulsing LED's
 unsigned long TimeNow = 0;
 unsigned long TimeInterval = 500;
 
+long AltPosition = -999,
+     HdgPosition = -999,
+     SpdPosition = -999;
+
 String oldpinStateSTR,
        pinStateSTR, 
-       pinStateString, 
-       APsp,
-       APspold,
+       pinStateString,
        stringnewstate,
        stringoldstate,
        com1,
@@ -83,10 +90,16 @@ String oldpinStateSTR,
        com2old,
        com2sb,
        com2sbold,
-       airsp,
-       airspold,
-       altit,
-       altitold;
+       aphdgset,
+       aphdgsetold,
+       output,
+       outputold,
+       apalt,
+       apaltold,
+       apairspeed,
+       apairspeedold,
+       apmachset,
+       apmachsetold;
        
 String nav1,
        nav1old,
@@ -95,7 +108,19 @@ String nav1,
        nav2,
        nav2old,
        nav2sb,
-       nav2sbold;
+       nav2sbold,
+       apActive,
+       apActiveOld,
+       apvs,
+       apvsold,
+       machIas,
+       machIasOld,
+       altLock,
+       altLockOld,
+       headingLock,
+       headingLockOld,
+       atArmed,
+       atArmedOld;
        
 String adf,
        adfold,
@@ -162,6 +187,11 @@ void welcomeMessages() {
 
   lcd.clear();
   lcd.print("Initializing...");
+  
+  tm1637_alt.clearDisplay();
+  tm1637_spd.clearDisplay();
+  tm1637_hdg.clearDisplay();
+  lcd.clear();
 }
 
 void setup() {
@@ -177,17 +207,14 @@ void setup() {
   tm1637_hdg.init();
   tm1637_clk.init();
 
-  // initialize timer  
-  Timer1.initialize(500000);//timing for 500ms
-  Timer1.attachInterrupt(TimingISR);//declare the interrupt serve routine:TimingISR  
-
   // initialize the lcd for 16 chars 2 lines, turn on backlight
   lcd.begin(16,2);
   lcd.backlight();
 
   // just to show something
   welcomeMessages();
- 
+  
+  Serial.begin(115200);
   stringoldstate = "111111111111111111111111111111111111111111111111111111111111111111111";
     
   // setup the input pins 
@@ -199,10 +226,11 @@ void setup() {
   // Get all the OUTPUT pins ready.
   for (int PinNo = 54; PinNo <= 69; PinNo++) {
     pinMode(PinNo, OUTPUT);
+    digitalWrite(PinNo, LOW);
   }
   
   mark = 10;
-  Serial.begin(115200);
+  Serial.flush();
 }
 
 /******************************************************************************************************************/
@@ -236,9 +264,9 @@ void loop() {
  
 // Get a character from the serial buffer
 char getChar() {
-  while(Serial.available() == 0);// wait for data
-  return((char)Serial.read());// Thanks Doug
-}//end of getchar
+  while(Serial.available() == 0);  // wait for data
+  return((char)Serial.read());     // Thanks Doug
+}
  
 /******************************************************************************************************************/
 // The first identifier was "?"
@@ -305,6 +333,80 @@ void QUESTION(){
         digitalWrite(59, LOW);
       }
     break;
+    
+    // Found the reading "autopilot heading set"
+    case 'r':
+      delay (11); // It seems to need a delay here
+      aphdgset = "";
+      aphdgset +=(char)Serial.read();
+      aphdgset += (char)Serial.read();
+      aphdgset += (char)Serial.read();
+
+      if (aphdgset != aphdgsetold) {  // checks to see if its different to the "old" reading
+        aphdgsetold = aphdgset; // Writes the current reading to the "old" string.
+      } 
+    break;
+    
+    // Found AP ACTIVE
+    case 'b':
+      delay(11);
+      apActive = "";
+      apActive += (char)Serial.read();
+      if(apActive != apActiveOld){
+        if(apActive == "1")
+          digitalWrite(7, HIGH);
+        if(apActive == "0")
+          digitalWrite(7, LOW);
+      }
+      apActiveOld = apActive; 
+    break;
+    
+    // found AP Airspeed
+    case 'u':
+      delay (11);
+      apairspeed ="";
+      apairspeed += (char)Serial.read();
+      apairspeed += (char)Serial.read();
+      apairspeed += (char)Serial.read();
+
+      if (apairspeed != apairspeedold){
+        apairspeedold = apairspeed;
+      }   
+    break;
+    
+    // found AP Vertical Speed set
+    case 'q':
+      delay (11);
+      apvs ="";
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+      apvs += (char)Serial.read();
+
+      if (apvs != apvsold){
+        apvsold = apvs;
+      }  
+    break;
+    
+    // found AP Alt
+    case 'p':
+      delay (11);
+      apalt = "";
+      apalt += (char)Serial.read();
+      apalt += (char)Serial.read();
+      apalt += (char)Serial.read();
+      //apalt += (char)Serial.read(); // if you want the trailering zero's, uncomment these lines
+      //apalt += (char)Serial.read();
+
+      if (apalt != apaltold){
+        apaltold = apalt;
+      }
+    break;
+    
+    case 'x':
+    break;
+    
   }
    // end of question void 
 }
@@ -994,49 +1096,5 @@ void PULSE_LEDs(){ // This void pulses the active LED's after pressing the 'Canc
 }// end of pulse_led's void
 
 /******************************************************************************************************************/
-void TimingISR() {
-  halfsecond ++;
-  Update = ON;
 
-  if(halfsecond == 2){
-    second ++;
-    
-    if(second == 60) {
-      minute ++;
-      
-      if(minute == 60) {
-        hour ++;
-        
-        if(hour == 24) {
-          hour = 0;
-        }
-        minute = 0;
-      }
-      second = 0;
-    }
-    halfsecond = 0;  
-  }
-
-  // Serial.println(second);
-  ClockPoint = (~ClockPoint) & 0x01;
-}
-
-/******************************************************************************************************************/
-void TimeUpdate(void) {
-  if(ClockPoint) {
-    tm1637a.point(POINT_ON);
-    tm1637b.point(POINT_ON);
-  } else {
-    tm1637a.point(POINT_OFF);
-    tm1637b.point(POINT_OFF);
-  }
-  
-  TimeDisp[0] = hour / 10;
-  TimeDisp[1] = hour % 10;
-  TimeDisp[2] = minute / 10;
-  TimeDisp[3] = minute % 10;
-  Update = OFF;
-}
-
-/******************************************************************************************************************/
 
