@@ -35,7 +35,7 @@
 int8_t Disp_alt[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_spd[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_hdg[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_clock[] = {0x00,0x00,0x00,0x00};
+int8_t Disp_clk[] = {0x00,0x00,0x00,0x00};
 
 #define CLK 2
 #define DIO_alt 3
@@ -179,11 +179,6 @@ void welcomeMessages() {
     i++;
 
   } while (i < 10);
-
-  tm1637_alt.clear();
-  tm1637_spd.clear();
-  tm1637_hdg.clear();
-  tm1637_clk.clear();
 
   lcd.clear();
   lcd.print("Initializing...");
