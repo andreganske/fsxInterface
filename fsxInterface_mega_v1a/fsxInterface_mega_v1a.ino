@@ -37,10 +37,10 @@ int8_t Disp_spd[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_hdg[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_clk[] = {0x00,0x00,0x00,0x00};
 
-#define CLK 2
-#define DIO_alt 3
-#define DIO_spd 4
-#define DIO_hdg 5
+#define CLK 69
+#define DIO_alt 66
+#define DIO_spd 67
+#define DIO_hdg 68
 #define DIO_clk 6
 
 // set the LCD address to 0x27 for a 20 chars 4 line display
@@ -136,14 +136,16 @@ String adf,
 String AnunB = "0",
        AnunC = "0",
        AnunD = "0",
-       AnunE = "0",
-       AnunH = "0";
+       //AnunE = "0",
+       AnunH = "0",
+       AnunAPa = "0";
 
 String AnunBx = "0",
        AnunCx = "0",
        AnunDx = "0",
-       AnunEx = "0",
-       AnunHx = "0";
+       //AnunEx = "0",
+       AnunHx = "0",
+       AnunAPax = "0";
 
 String gearSimple;
 
@@ -201,7 +203,11 @@ void setup() {
   tm1637_spd.init();
   tm1637_hdg.init();
   tm1637_clk.init();
-
+  
+  tm1637_alt.point(POINT_OFF);
+  tm1637_spd.point(POINT_OFF);
+  tm1637_hdg.point(POINT_OFF);
+ 
   // initialize the lcd for 16 chars 2 lines, turn on backlight
   lcd.begin(16,2);
   lcd.backlight();
@@ -229,7 +235,6 @@ void setup() {
 }
 
 /******************************************************************************************************************/
-
 void loop() {
 
   {INPUTPINS();}   // Check the "button pressed" section
@@ -240,18 +245,10 @@ void loop() {
   // now lets check the serial buffer for any input data
   if (Serial.available()) {
     CodeIn = getChar();
-    
-    if (CodeIn == '=') {
-    	EQUALS(); // The first identifier is "="
-    }
-
-    if (CodeIn == '?') {
-    	QUESTION(); // The first identifier is "?"
-    }
-
-    if (CodeIn == '/') {
-    	SLASH(); // The first identifier is "/" (Annunciators)
-    }
+    if (CodeIn == '=') {EQUALS();}   // The first identifier is "="
+    if (CodeIn == '<') {LESSTHAN();} // The first identifier is "<"
+    if (CodeIn == '?') {QUESTION();} // The first identifier is "?"
+    if (CodeIn == '/') {SLASH();}    // The first identifier is "/" (Annunciators)
   }
 }
 
@@ -457,7 +454,7 @@ void SLASH(){    // The first identifier was "/" (Annunciator)
       }
     break;
 
-    case 'E'://Found the second identifier
+    /*case 'E'://Found the second identifier
       AnunE = String(getChar());// get state if /E  (Stall warning)
       if (AnunE == "1") {
         if (AnunEx != "3") {
@@ -470,7 +467,7 @@ void SLASH(){    // The first identifier was "/" (Annunciator)
         AnunEx = "0";
         digitalWrite(65, LOW);
       }
-    break;
+    break;*/
 
     case 'H':
       AnunH = String(getChar());// get state if /H  (Low fuel)
@@ -834,6 +831,46 @@ void EQUALS(){      // The first identifier was "="
       dme2old = dme2;
     }
     break;
+    
+    // Autopilot config
+    case 'a': // autopilot active
+      AnunAPa = String(getChar());
+      if (AnunAPa == "1") {
+        if (AnunAPax != "3") {
+          digitalWrite(63, HIGH);
+        }
+      } else {
+        digitalWrite(63, LOW);
+        AnunAPax = "0";
+      }
+    break;
+    
+    case 'b': // autopilot autitude set
+      delay (11);
+      Disp_alt[0] = getChar();
+      Disp_alt[1] = getChar();
+      Disp_alt[2] = getChar();
+      Disp_alt[3] = getChar();
+      tm1637_alt.display(Disp_alt);
+    break;
+    
+    case 'c': // autopilot vertical speed set
+      delay (11);
+      Disp_spd[0] = getChar();
+      Disp_spd[1] = getChar();
+      Disp_spd[2] = getChar();
+      Disp_spd[3] = getChar();
+      tm1637_spd.display(Disp_spd);
+    break;
+    
+    case 'd': // autopilot heading set
+      delay (11);
+      Disp_hdg[0] = getChar();
+      Disp_hdg[1] = getChar();
+      Disp_hdg[2] = getChar();
+      Disp_hdg[3] = getChar();
+      tm1637_hdg.display(Disp_hdg);
+    break;
   }
 }
 
@@ -1047,8 +1084,9 @@ void INPUTPINS(){
            if (AnunB == "1"){AnunBx = "3";}
            if (AnunC == "1"){AnunCx = "3";}
            if (AnunD == "1"){AnunDx = "3";}
-           if (AnunE == "1"){AnunEx = "3";}
+           //if (AnunE == "1"){AnunEx = "3";}
            if (AnunH == "1"){AnunHx = "3";}
+           if (AnunAPa == "1"){AnunAPax = "3";}           
         } // end of pin 22 sortout
 
         if (pinNo == 23 && pinStateSTR == "0"){Serial.println ("C19");} // Trim adjust DOWN
@@ -1058,9 +1096,35 @@ void INPUTPINS(){
         
         if (pinNo == 31 && pinStateSTR == "0"){Serial.println ("C01");} // Gear UP 
         if (pinNo == 31 && pinStateSTR == "1"){Serial.println ("C02");} // Gear DOWN
+        
+        if (pinNo == 32 && pinStateSTR == "0"){Serial.println ("C040");} // Parking brake OFF 
+        if (pinNo == 32 && pinStateSTR == "1"){Serial.println ("C041");} // Parking brake ON
+        
+        if (pinNo == 33 && pinStateSTR == "1"){Serial.println ("C20");} // Auto spoiler ON
+        if (pinNo == 34 && pinStateSTR == "1"){Serial.println ("C21");} // Auto spoiler OFF
+        
+        // LIGHTS
+        if (pinNo == 41 && pinStateSTR == "1"){Serial.println ("C411");} // NAV ON
+        if (pinNo == 41 && pinStateSTR == "0"){Serial.println ("C410");} // NAV OFF
+        if (pinNo == 42 && pinStateSTR == "1"){Serial.println ("C421");} // Beacon ON
+        if (pinNo == 42 && pinStateSTR == "0"){Serial.println ("C420");} // Beacon OFF
+        if (pinNo == 43 && pinStateSTR == "1"){Serial.println ("C431");} // Landing ON
+        if (pinNo == 43 && pinStateSTR == "0"){Serial.println ("C430");} // Landing OFF
+        if (pinNo == 44 && pinStateSTR == "1"){Serial.println ("C441");} // Taxi ON
+        if (pinNo == 44 && pinStateSTR == "0"){Serial.println ("C440");} // Taxi OFF
+        if (pinNo == 45 && pinStateSTR == "1"){Serial.println ("C451");} // Strobe ON
+        if (pinNo == 45 && pinStateSTR == "0"){Serial.println ("C450");} // Strobe OFF
+        if (pinNo == 46 && pinStateSTR == "1"){Serial.println ("C461");} // Panel ON
+        if (pinNo == 46 && pinStateSTR == "0"){Serial.println ("C460");} // Panel OFF
+        if (pinNo == 47 && pinStateSTR == "1"){Serial.println ("C471");} // Recognation ON
+        if (pinNo == 47 && pinStateSTR == "0"){Serial.println ("C470");} // Recognation OFF
+        if (pinNo == 48 && pinStateSTR == "1"){Serial.println ("C481");} // Wing ON
+        if (pinNo == 48 && pinStateSTR == "0"){Serial.println ("C480");} // Wing OFF
+        if (pinNo == 49 && pinStateSTR == "1"){Serial.println ("C491");} // Logo ON
+        if (pinNo == 49 && pinStateSTR == "0"){Serial.println ("C490");} // Logo OFF
+        if (pinNo == 50 && pinStateSTR == "1"){Serial.println ("C501");} // Cabin ON
+        if (pinNo == 50 && pinStateSTR == "0"){Serial.println ("C500");} // Cabin OFF       
 
-        // Add more "Simconnect direct" codes here.
-        // now the "keys" bit ,,, notice the "26" in line above and also in line below.
         if (pinNo > 26){ // start of "Keys" bit
           Serial.print ("D"); 
           if (pinNo < 10) Serial.print ("0");
@@ -1085,11 +1149,11 @@ void PULSE_LEDs(){ // This void pulses the active LED's after pressing the 'Canc
     if (AnunBx == "3"){if (pulseOn == 1){digitalWrite(60, HIGH);}else{digitalWrite(60, LOW);}}
     if (AnunCx == "3"){if (pulseOn == 1){digitalWrite(61, HIGH);}else{digitalWrite(61, LOW);}}
     if (AnunDx == "3"){if (pulseOn == 1){digitalWrite(62, HIGH);}else{digitalWrite(62, LOW);}}
-    if (AnunEx == "3"){if (pulseOn == 1){digitalWrite(63, HIGH);}else{digitalWrite(63, LOW);}}
+    //if (AnunEx == "3"){if (pulseOn == 1){digitalWrite(63, HIGH);}else{digitalWrite(63, LOW);}}
+    if (AnunAPax == "3"){if (pulseOn == 1){digitalWrite(63, HIGH);}else{digitalWrite(63, LOW);}}
     if (AnunHx == "3"){if (pulseOn == 1){digitalWrite(64, HIGH);}else{digitalWrite(64, LOW);}}
   }//end of a time trigger
 }// end of pulse_led's void
 
 /******************************************************************************************************************/
-
 
