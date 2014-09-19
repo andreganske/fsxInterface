@@ -33,73 +33,124 @@
 #define OFF 0
 
 int8_t Disp_alt[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_spd[] = {0x00,0x00,0x00,0x00};
+int8_t Disp_altold[] = {0x00,0x00,0x00,0x00};
 int8_t Disp_hdg[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_clk[] = {0x00,0x00,0x00,0x00};
+int8_t Disp_hdgold[] = {0x00,0x00,0x00,0x00};
+int8_t Disp_spd[] = {0x00,0x00,0x00,0x00};
+int8_t Disp_spdold[] = {0x00,0x00,0x00,0x00};
 
-#define CLK 69
-#define DIO_alt 66
-#define DIO_spd 67
-#define DIO_hdg 68
-#define DIO_clk 6
+// define all pins 
+#define rot_radio01 8 // radio rotary encoder
+#define rot_radio02 9 // radio rotary encoder
+#define rot_radio03 10 // radio rotary push
+#define psh_radio 11 // radio push switch
 
-// set the LCD address to 0x27 for a 20 chars 4 line display
-// Set the pins on the I2C chip used for LCD connections:
-//                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
+#define radio_com1 14 // radio COM1
+#define radio_com2 15 // radio COM2
+#define radio_nav1 16 // radio NAV1
+#define radio_nav2 17 // radio NAV2
+#define radio_adf 18 // radio ADF
+#define radio_dme 19 // radio DME
+
+#define lcd_sda 20 // LCD I2C SDA
+#define lcd_scl 21 // LCD I2C SCL
+
+#define lcd_clk 22 // LCD clock
+#define lcd_alt 23 // LCD altimeter
+#define lcd_hdg 24 // LCD heading
+#define lcd_spd 25 // LCD speed
+
+#define rot_alt01 26 // altitude rotary encoder
+#define rot_alt02 27 // altitude rotary encoder
+#define rot_alt03 28 // altitude rotary push
+
+#define rot_hdg01 29 // heading rotary encoder
+#define rot_hdg02 30 // heading rotary encoder
+#define rot_hdg03 31 // heading rotary push
+
+#define rot_spd01 32 // speed rotary encoder
+#define rot_spd02 33 // speed rotary encoder
+#define rot_spd03 34 // speed rotary push
+
+#define swt_gear 40 // Gear up/down
+#define swt_pbrk 41 // parking breaks on/off
+#define swt_splr 42 // auto spoiler on/off
+
+#define swt_nav 44 // Light switch nav
+#define swt_bcn 45 // Light switch beacon
+#define swt_ldn 46 // Light switch landing
+#define swt_tax 47 // Light switch taxi
+#define swt_stb 48 // Light switch strobo
+#define swt_pnl 49 // Light switch panel
+#define swt_rcg 50 // Light switch recognation
+#define swt_wng 51 // Light switch wing
+#define swt_lgo 52 // Light switch logo
+#define swt_cbn 53 // Light switch cabin
+
+#define led_gdn 54 // LED Gear down N
+#define led_gdl 55 // LED Gear down L
+#define led_gdr 56 // LED Gear down R
+
+#define led_gmn 57 // LED Gear moving N
+#define led_gml 58 // LED Gear moving L
+#define led_gmr 59 // LED Gear moving R
+
+#define led_war_flap 60 // LED warning flaps overspeed
+#define led_war_gear 61 // LED warning gear overspeed
+#define led_war_frame 62 // LED warning frame overspeed
+#define led_war_stall 63 // LED warning stall 
+#define led_war_fuel 64 // LED warning total fuel
+#define buz_warning 65 // Buzzer Master warning
+
+// Set LCD I2C address
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 // Defining rotary encoders pins
-Quadrature QUAD_radio(8, 9);
-Quadrature QUAD_alt(48, 49);
-Quadrature QUAD_spd(50, 51);
-Quadrature QUAD_hdg(52, 53);
+Quadrature QUAD_radio(rot_radio01, rot_radio02);
+Quadrature QUAD_alt(rot_alt01, rot_alt02);
+Quadrature QUAD_spd(rot_hdg01, rot_hdg02);
+Quadrature QUAD_hdg(rot_spd01, rot_spd03);
 
-// set TM1637 lcds
-TM1637 tm1637_alt(CLK, DIO_alt);
-TM1637 tm1637_spd(CLK, DIO_spd);
-TM1637 tm1637_hdg(CLK, DIO_hdg);
-TM1637 tm1637_clk(CLK, DIO_clk);
+// set LCDs TM1637 addresses
+TM1637 tm1637_alt(lcd_clk, lcd_alt);
+TM1637 tm1637_hdg(lcd_clk, lcd_hdg);
+TM1637 tm1637_spd(lcd_clk, lcd_spd);
 
-int CodeIn;       // used on all serial reads
-int X;            // a rotary variable
-int Xold;         // the old reading
-int Xdif;         // the difference since last loop
-int active;       // the mode thats active
-int activeold;
-int mark;         // shows where the cursor is in the likes of ADF etc
-int pulseOn = 0;  // the loop that pulses the LED's
-
-unsigned long TimeStart = 0; // used in pulsing LED's
-unsigned long TimeNow = 0;
-unsigned long TimeInterval = 500;
-
-long AltPosition = -999,
-     HdgPosition = -999,
-     SpdPosition = -999;
-
-String oldpinStateSTR,
-       pinStateSTR, 
-       pinStateString,
-       stringnewstate,
-       stringoldstate,
-       com1,
+int CodeIn,  // used on all serial reads
+    pulseOn = 0,
+    active,
+    activeold,
+    mark = 10;
+    
+int alt_X,
+    alt_Xold,
+    alt_Xdif;
+    
+int hdg_X,
+    hdg_Xold,
+    hdg_Xdif;
+    
+int spd_X,
+    spd_Xold,
+    spd_Xdif;
+    
+int radio_X,
+    radio_Xold,
+    radio_Xdif;
+    
+String stringoldstate,
+       pinStateSTR,
+       pinStateSTRold,
+       stringnewstate;
+       
+String com1,
        com1old,
        com1sb, 
        com1sbold,
        com2,
        com2old,
        com2sb,
-       com2sbold,
-       aphdgset,
-       aphdgsetold,
-       output,
-       outputold,
-       apalt,
-       apaltold,
-       apairspeed,
-       apairspeedold,
-       apmachset,
-       apmachsetold;
+       com2sbold;
        
 String nav1,
        nav1old,
@@ -108,19 +159,7 @@ String nav1,
        nav2,
        nav2old,
        nav2sb,
-       nav2sbold,
-       apActive,
-       apActiveOld,
-       apvs,
-       apvsold,
-       machIas,
-       machIasOld,
-       altLock,
-       altLockOld,
-       headingLock,
-       headingLockOld,
-       atArmed,
-       atArmedOld;
+       nav2sbold;
        
 String adf,
        adfold,
@@ -129,62 +168,27 @@ String adf,
        dme1,
        dme1old,
        dme2,
-       dme2old,
-       pitot,
-       pitotold;
-       
+       dme2old;
+
 String AnunB = "0",
        AnunC = "0",
        AnunD = "0",
-       //AnunE = "0",
-       AnunH = "0",
-       AnunAPa = "0";
-
+       AnunE = "0",
+       AnunH = "0";
+       
 String AnunBx = "0",
        AnunCx = "0",
        AnunDx = "0",
-       //AnunEx = "0",
-       AnunHx = "0",
-       AnunAPax = "0";
-
+       AnunEx = "0",
+       AnunHx = "0";
+       
 String gearSimple;
+       
+unsigned long TimeStart = 0;
+unsigned long TimeNow = 0;
+unsigned long TimeInterval = 500;
 
-char blank = 255;
-
-void welcomeMessages() {
-
-  lcd.setCursor(0,0);
-  lcd.print("Welcome FSX");
-  lcd.setCursor(0, 1);
-  lcd.print("jimspage.co.nz");
-
-  delay(500);
-
-  lcd.setCursor(0,0);
-  lcd.print("Running LCD test");
-
-  int i = 0;
-  do {
-
-    Disp_alt[0] = Disp_alt[1] = Disp_alt[2] = Disp_alt[3] = i;
-    Disp_spd[0] = Disp_spd[1] = Disp_spd[2] = Disp_spd[3] = i;
-    Disp_hdg[0] = Disp_hdg[1] = Disp_hdg[2] = Disp_hdg[3] = i;
-    Disp_clk[0] = Disp_clk[1] = Disp_clk[2] = Disp_clk[3] = i;
-
-    tm1637_alt.display(Disp_alt);
-    tm1637_spd.display(Disp_spd);
-    tm1637_hdg.display(Disp_hdg);
-    tm1637_clk.display(Disp_clk);
-
-    delay(100);
-
-    i++;
-
-  } while (i < 10);
-
-  lcd.clear();
-  lcd.print("Initializing...");
-  
+void lcdClear() {
   tm1637_alt.clearDisplay();
   tm1637_spd.clearDisplay();
   tm1637_hdg.clearDisplay();
@@ -195,60 +199,55 @@ void setup() {
   
   // set all TM1637 and init then
   tm1637_alt.set();
-  tm1637_spd.set();
   tm1637_hdg.set();
-  tm1637_clk.set();
+  tm1637_spd.set();
 
   tm1637_alt.init();
-  tm1637_spd.init();
   tm1637_hdg.init();
-  tm1637_clk.init();
+  tm1637_spd.init();
   
+  // turn pointer off
   tm1637_alt.point(POINT_OFF);
-  tm1637_spd.point(POINT_OFF);
   tm1637_hdg.point(POINT_OFF);
+  tm1637_spd.point(POINT_OFF);
  
   // initialize the lcd for 16 chars 2 lines, turn on backlight
   lcd.begin(16,2);
   lcd.backlight();
 
   // just to show something
-  welcomeMessages();
+  lcdClear();
   
-  Serial.begin(115200);
   stringoldstate = "111111111111111111111111111111111111111111111111111111111111111111111";
     
   // setup the input pins 
-  for (int doutPin = 10; doutPin <= 53; doutPin++) {  
+  for (int doutPin = 42; doutPin >= 10; doutPin--) {  
     pinMode(doutPin, INPUT);
     digitalWrite(doutPin, HIGH);  
   } 
   
   // Get all the OUTPUT pins ready.
-  for (int PinNo = 54; PinNo <= 69; PinNo++) {
+  for (int PinNo = 69; PinNo >= 43; PinNo--) {
     pinMode(PinNo, OUTPUT);
     digitalWrite(PinNo, LOW);
   }
   
-  mark = 10;
-  Serial.flush();
+  Serial.begin(115200);
 }
 
 /******************************************************************************************************************/
 void loop() {
+  {INPUTS();}     //Check the "Inputs" section
+  {LCDMODE();}    // Sets up the LCD for the mode it's in (From the rotary switch)
+  {ROTARYS();}    // Go and check the rotary encoder
+  {PULSE_LEDs();} // Check the pulsing void
 
-  {INPUTPINS();}   // Check the "button pressed" section
-  {LCDMODE();}     // Sets up the LCD for the mode it's in (From the rotary switch)
-  {ROTARYS();}     // Go and check the rotary encoder
-  {PULSE_LEDs();}  // Check the pulsing void
-
-  // now lets check the serial buffer for any input data
   if (Serial.available()) {
     CodeIn = getChar();
     if (CodeIn == '=') {EQUALS();}   // The first identifier is "="
     if (CodeIn == '<') {LESSTHAN();} // The first identifier is "<"
     if (CodeIn == '?') {QUESTION();} // The first identifier is "?"
-    if (CodeIn == '/') {SLASH();}    // The first identifier is "/" (Annunciators)
+    if (CodeIn == '/') {SLASH();}    // The first identifier is "/"
   }
 }
 
@@ -256,171 +255,315 @@ void loop() {
  
 // Get a character from the serial buffer
 char getChar() {
-  while(Serial.available() == 0);  // wait for data
-  return((char)Serial.read());     // Thanks Doug
+  while(Serial.available() == 0);
+  return((char)Serial.read());
 }
- 
+
 /******************************************************************************************************************/
-// The first identifier was "?"
-void QUESTION(){   
- 
-  // Get the second identifier 
+void EQUALS(){ // The first identifier is "="
   CodeIn = getChar();
-
-  // Now lets find what to do with it
-  switch(CodeIn) {
-    
-    // found the second identifier (the "Gear simple")
-    case 'Y':
-      gearSimple = "";
+  switch (CodeIn) {
+     case 'b': // AP altitude
+      Disp_alt[0] = getChar();
+      Disp_alt[1] = getChar();
+      Disp_alt[2] = getChar();
+      Disp_alt[3] = getChar();
       
-      // get first charactor (Nose gear)
-      gearSimple += getChar();
+      if (Disp_alt[0] != Disp_altold[0] 
+          || Disp_alt[1] != Disp_altold[1] 
+          || Disp_alt[2] != Disp_altold[2] 
+          || Disp_alt[3] != Disp_altold[3]) {
+        tm1637_alt.display(Disp_alt);
+        Disp_altold[0] = Disp_alt[0];
+        Disp_altold[1] = Disp_alt[1];
+        Disp_altold[2] = Disp_alt[2];
+        Disp_altold[3] = Disp_alt[3];
+      }
+     break;
+     
+     case 'c': // AP speed
+      Disp_spd[0] = getChar();
+      Disp_spd[1] = getChar();
+      Disp_spd[2] = getChar();
+      Disp_spd[3] = getChar();
       
-      //Nose gear
-      if (gearSimple == "2"){
-        digitalWrite(54, HIGH);
-      }else{
-        digitalWrite(54, LOW);
+      if (Disp_spd[0] != Disp_spdold[0] 
+          || Disp_spd[1] != Disp_spdold[1] 
+          || Disp_spd[2] != Disp_spdold[2] 
+          || Disp_spd[3] != Disp_spdold[3]) {
+        tm1637_alt.display(Disp_spd);
+        Disp_spdold[0] = Disp_spd[0];
+        Disp_spdold[1] = Disp_spd[1];
+        Disp_spdold[2] = Disp_spd[2];
+        Disp_spdold[3] = Disp_spd[3];
       }
+     break;
+     
+     case 'd':// AP heading
+      Disp_hdg[0] = getChar();
+      Disp_hdg[1] = getChar();
+      Disp_hdg[2] = getChar();
+      Disp_hdg[3] = getChar();
       
-      //nose gear moving
-      if (gearSimple == "1"){
-        digitalWrite(57, HIGH);
-      }else{
-        digitalWrite(57, LOW);
+      if (Disp_hdg[0] != Disp_hdgold[0] 
+          || Disp_hdg[1] != Disp_hdgold[1] 
+          || Disp_hdg[2] != Disp_hdgold[2] 
+          || Disp_hdg[3] != Disp_hdgold[3]) {
+        tm1637_alt.display(Disp_hdg);
+        Disp_hdgold[0] = Disp_hdg[0];
+        Disp_hdgold[1] = Disp_hdg[1];
+        Disp_hdgold[2] = Disp_hdg[2];
+        Disp_hdgold[3] = Disp_hdg[3];
       }
-      
-      // get the second charactor (gear left)
-      gearSimple += getChar(); 
-      
-      //left gear
-      if (gearSimple.endsWith("2")){
-        digitalWrite(55, HIGH);
-      }else{
-        digitalWrite(55, LOW);
-      }
-      
-      //left gear moving
-      if (gearSimple.endsWith("1")){
-        digitalWrite(58, HIGH);
-      }else{
-        digitalWrite(58, LOW);
-      }
-    
-      // get the third charactor  (gear right)
-      gearSimple += getChar(); 
-      
-      //right gear
-      if (gearSimple.endsWith("2")){
-        digitalWrite(56, HIGH);
-      }else{
-        digitalWrite(56, LOW);
-      }
-      
-      //right gear moving
-      if (gearSimple.endsWith("1")){
-        digitalWrite(59, HIGH);
-      }else{
-        digitalWrite(59, LOW);
-      }
-    break;
-    
-    // Found the reading "autopilot heading set"
-    case 'r':
-      delay (11); // It seems to need a delay here
-      aphdgset = "";
-      aphdgset +=(char)Serial.read();
-      aphdgset += (char)Serial.read();
-      aphdgset += (char)Serial.read();
-
-      if (aphdgset != aphdgsetold) {  // checks to see if its different to the "old" reading
-        aphdgsetold = aphdgset; // Writes the current reading to the "old" string.
-      } 
-    break;
-    
-    // Found AP ACTIVE
-    case 'b':
-      delay(11);
-      apActive = "";
-      apActive += (char)Serial.read();
-      if(apActive != apActiveOld){
-        if(apActive == "1")
-          digitalWrite(7, HIGH);
-        if(apActive == "0")
-          digitalWrite(7, LOW);
-      }
-      apActiveOld = apActive; 
-    break;
-    
-    // found AP Airspeed
-    case 'u':
-      delay (11);
-      apairspeed ="";
-      apairspeed += (char)Serial.read();
-      apairspeed += (char)Serial.read();
-      apairspeed += (char)Serial.read();
-
-      if (apairspeed != apairspeedold){
-        apairspeedold = apairspeed;
-      }   
-    break;
-    
-    // found AP Vertical Speed set
-    case 'q':
-      delay (11);
-      apvs ="";
-      apvs += (char)Serial.read();
-      apvs += (char)Serial.read();
-      apvs += (char)Serial.read();
-      apvs += (char)Serial.read();
-      apvs += (char)Serial.read();
-
-      if (apvs != apvsold){
-        apvsold = apvs;
-      }  
-    break;
-    
-    // found AP Alt
-    case 'p':
-      delay (11);
-      apalt = "";
-      apalt += (char)Serial.read();
-      apalt += (char)Serial.read();
-      apalt += (char)Serial.read();
-      //apalt += (char)Serial.read(); // if you want the trailering zero's, uncomment these lines
-      //apalt += (char)Serial.read();
-
-      if (apalt != apaltold){
-        apaltold = apalt;
-      }
-    break;
-    
-    case 'x':
-    break;
-    
+     break;
+     
+     case 'A':     // NAV1
+       com1 = "";
+       com1 += getChar();
+       com1 += getChar();
+       com1 += getChar();
+       com1 += getChar();
+       com1 += getChar();
+       com1 += getChar();
+       com1 += getChar();
+       
+       if (com1 != com1old && digitalRead(14) == LOW) {
+         delay (11);
+         lcd.setCursor(9, 0);
+         delay (11);
+         lcd.print(com1);
+         com1old = com1;
+       }
+     break;
+     
+     case 'B':     // NAV1 S/B
+       com1sb = "";
+       com1sb += getChar();
+       com1sb += getChar();
+       com1sb += getChar();
+       com1sb += getChar();
+       com1sb += getChar();
+       com1sb += getChar();
+       com1sb += getChar();
+       
+       if (com1sb != com1sbold && digitalRead(14) == LOW ){
+         delay (11);
+         lcd.setCursor(9, 1);
+         delay (11);
+         lcd.print(com1sb);
+         com1sbold = com1sb;
+       }
+     break;
+     
+     case  'C':     // COM2
+       com2 = "";
+       com2 += getChar();
+       com2 += getChar();
+       com2 += getChar();
+       com2 += getChar();
+       com2 += getChar();
+       com2 += getChar();
+       com2 += getChar();
+       
+       if (com2 != com2old && digitalRead(15) == LOW) {
+         lcd.setCursor(9, 0);
+         delay (11);
+         lcd.print(com2);
+         com2old = com2;
+       }
+     break;
+     
+     case  'D':     // COM2 S/B
+       com2sb = "";
+       com2sb += getChar();
+       com2sb += getChar();
+       com2sb += getChar();
+       com2sb += getChar();
+       com2sb += getChar();
+       com2sb += getChar();
+       com2sb += getChar();
+       
+       if (com2sb != com2sbold && digitalRead(15) == LOW) {
+         lcd.setCursor(9, 1);
+         delay (11);
+         lcd.print(com2sb);
+         com2sbold = com2sb;
+       }
+     break;          
+     
+     case  'E':     // NAV1
+       delay (11);
+       nav1 = "";
+       nav1 += getChar();
+       nav1 += getChar();
+       nav1 += getChar();
+       nav1 += getChar();
+       nav1 += getChar();
+       nav1 += getChar();
+       nav1 += (" ");
+       
+       if (nav1 != nav1old && digitalRead(16) == LOW) {
+         lcd.setCursor(9, 0);
+         delay (11);
+         lcd.print(nav1);
+         nav1old = nav1;
+       }
+     break;
+     
+     case  'F':     // NAV1 S/B
+       nav1sb = "";
+       nav1sb += getChar();
+       nav1sb += getChar();
+       nav1sb += getChar();
+       nav1sb += getChar();
+       nav1sb += getChar();
+       nav1sb += getChar();
+       nav1sb += (" ");
+       
+       if (nav1sb != nav1sbold && digitalRead(16) == LOW) {
+         lcd.setCursor(9, 1);
+         delay (11);
+         lcd.print(nav1sb);
+         nav1sbold = nav1sb;
+       }
+     break;
+     
+     case  'G':     // NAV2
+       delay (11);
+       nav2 = "";
+       nav2 += getChar();
+       nav2 += getChar();
+       nav2 += getChar();
+       nav2 += getChar();
+       nav2 += getChar();
+       nav2 += getChar();
+       nav2 += (" ");
+       
+       if (nav2 != nav2old && digitalRead(17) == LOW) {
+         lcd.setCursor(9, 0);
+         delay (11);
+         lcd.print(nav2);
+         nav2old = nav2;
+       }
+     break;
+     
+     case  'H':     // NAV2 S/B
+       nav2sb = "";
+       nav2sb += getChar();
+       nav2sb += getChar();
+       nav2sb += getChar();
+       nav2sb += getChar();
+       nav2sb += getChar();
+       nav2sb += getChar();
+       nav2sb += (" ");
+       
+       if (nav2sb != nav2sbold && digitalRead(17) == LOW) {
+         lcd.setCursor(9, 1);
+         delay (11);
+         lcd.print(nav2sb);
+         nav2sbold = nav2sb;
+       }
+     break;
+     
+     case  'I':     // ADF
+       adf = "";
+       adf += getChar();
+       adf += getChar();
+       adf += getChar();
+       adf += getChar();
+       adf += getChar();
+       adf += getChar();
+       adf += (" ");
+       
+       if (adf != adfold && digitalRead(18) == LOW) {
+         lcd.setCursor(9, 0);
+         delay (11);
+         lcd.print(adf);
+         adfold = adf;
+       }
+     break;   
+     
+     case  'K':     // DME1
+       delay (11);
+       dme1 = "";
+       dme1 += getChar();
+       dme1 += getChar();
+       dme1 += getChar();
+       dme1 += getChar();
+       dme1 += getChar();
+       dme1 += ("   ");
+       
+       if (dme1 != dme1old && digitalRead(19) == LOW) {
+         lcd.setCursor(9, 0);
+         delay (11);
+         lcd.print(dme1);
+         dme1old = dme1;
+       }
+     break;          
+     
+     case  'L':    // DME2
+       delay (11);
+       dme2 = "";
+       dme2 += getChar();
+       dme2 += getChar();
+       dme2 += getChar();
+       dme2 += getChar();
+       dme2 += getChar();
+       dme2 += ("   ");
+       
+       if (dme2 != dme2old && digitalRead(19) == LOW) {
+         lcd.setCursor(9, 1);
+         delay (11);
+         lcd.print(dme2);
+         dme2old = dme2;
+       }
+      break;
   }
-   // end of question void 
 }
 
 /******************************************************************************************************************/
-void SLASH(){    // The first identifier was "/" (Annunciator)
-  
-  CodeIn = getChar(); // Get another character
-  
-  switch(CodeIn) {// Now lets find what to do with it
-    case 'B'://Found the second identifier
-      AnunB = String(getChar());// get state if /B  (Overspeed flaps)
+void LESSTHAN(){ // The first identifier is "<"
+  CodeIn = getChar();
+}
+
+/******************************************************************************************************************/
+void QUESTION(){ // The first identifier is "?"
+  CodeIn = getChar();
+  switch(CodeIn) {
+    case 'Y': // Landing gear
+      gearSimple = "";
+
+      gearSimple += getChar(); // nose gear
+      if (gearSimple == "2"){digitalWrite(led_gdn, HIGH);}else{digitalWrite(led_gdn, LOW);} // down
+      if (gearSimple == "1"){digitalWrite(led_gmn, HIGH);}else{digitalWrite(led_gmn, LOW);} // moving
+      
+      gearSimple += getChar(); // left gear
+      if (gearSimple.endsWith("2")){digitalWrite(led_gdl, HIGH);}else{digitalWrite(led_gdl, LOW);} // down
+      if (gearSimple.endsWith("1")){digitalWrite(led_gml, HIGH);}else{digitalWrite(led_gml, LOW);} // moving
+    
+      gearSimple += getChar(); // right gear
+      if (gearSimple.endsWith("2")){digitalWrite(led_gdr, HIGH);}else{digitalWrite(led_gdr, LOW);} // down
+      if (gearSimple.endsWith("1")){digitalWrite(led_gmr, HIGH);}else{digitalWrite(led_gmr, LOW);} // moving
+    break;
+  }
+}
+
+/******************************************************************************************************************/
+void SLASH(){ // The first identifier is "/"
+  CodeIn = getChar();
+  switch(CodeIn) {
+    case 'B':
+      AnunB = String(getChar()); // get state if /B  (Overspeed flaps)
       if (AnunB == "1") {
-        if (AnunBx != "3") {// checks it's not flashing
-          digitalWrite(60, HIGH);
+        if (AnunBx != "3") {
+          digitalWrite(led_war_flap, HIGH);
           delay(11);
-          digitalWrite(65, HIGH);
+          digitalWrite(buz_warning, HIGH);
         }
       } else { 
-        digitalWrite(60, LOW);
+        digitalWrite(led_war_flap, LOW);
         AnunBx = "0";
-        digitalWrite(65, LOW);
+        digitalWrite(buz_warning, LOW);
       }
     break;
 
@@ -428,14 +571,14 @@ void SLASH(){    // The first identifier was "/" (Annunciator)
       AnunC = String(getChar());// get state if /C  (Overspeed gear)
       if (AnunC == "1") {
         if (AnunCx != "3") {
-          digitalWrite(61, HIGH);
+          digitalWrite(led_war_gear, HIGH);
           delay(11); 
-          digitalWrite(65, HIGH);
+          digitalWrite(buz_warning, HIGH);
         }
       } else {
-        digitalWrite(61, LOW);
+        digitalWrite(led_war_gear, LOW);
         AnunCx = "0";
-        digitalWrite(65, LOW);
+        digitalWrite(buz_warning, LOW);
       }
     break;
 
@@ -443,56 +586,106 @@ void SLASH(){    // The first identifier was "/" (Annunciator)
       AnunD = String(getChar());// get state if /D  (Overspeed frame)
       if (AnunD == "1") {
         if (AnunDx != "3") {
-          digitalWrite(62, HIGH);
+          digitalWrite(led_war_frame, HIGH);
           delay(11);
-          digitalWrite(65, HIGH);
+          digitalWrite(buz_warning, HIGH);
         }
       } else {
-        digitalWrite(62, LOW);
+        digitalWrite(led_war_frame, LOW);
         AnunDx = "0";
-        digitalWrite(65, LOW);
+        digitalWrite(buz_warning, LOW);
       }
     break;
 
-    /*case 'E'://Found the second identifier
+    case 'E':
       AnunE = String(getChar());// get state if /E  (Stall warning)
       if (AnunE == "1") {
         if (AnunEx != "3") {
-          digitalWrite(63, HIGH);
+          digitalWrite(led_war_stall, HIGH);
           delay(11);
-          digitalWrite(65, HIGH);
+          digitalWrite(buz_warning, HIGH);
         }
       } else {
-        digitalWrite(63, LOW);
+        digitalWrite(led_war_stall, LOW);
         AnunEx = "0";
-        digitalWrite(65, LOW);
+        digitalWrite(buz_warning, LOW);
       }
-    break;*/
+    break;
 
     case 'H':
       AnunH = String(getChar());// get state if /H  (Low fuel)
       if (AnunH == "1") {
         if (AnunHx != "3") {
-          digitalWrite(64, HIGH);
+          digitalWrite(led_war_fuel, HIGH);
           delay(11);
-          digitalWrite(65, HIGH);
+          digitalWrite(buz_warning, HIGH);
         }
       } else {
-        digitalWrite(64, LOW);
+        digitalWrite(led_war_fuel, LOW);
         AnunHx = "0";
-        digitalWrite(65, LOW);
+        digitalWrite(buz_warning, LOW);
       }
     break;
-  }//end of switch
-}//end of slash
+  }
+}
 
-/******************************************************************************************************************/ 
-void LCDMODE() {
+/******************************************************************************************************************/
+void INPUTS(){
+  stringnewstate = "";
+  for (int pinNo = 10; pinNo <= 42; pinNo++){ // validade all input pins
+    pinStateSTR = String(digitalRead(pinNo));
+    pinStateSTRold = "";
+    pinStateSTRold += String(stringoldstate.charAt(pinNo - 10));
+    if(pinStateSTR != pinStateSTRold) {
+      if (pinNo == psh_radio and pinStateSTR == "0") {
+        if (active == radio_com1) Serial.println("A06"); //com1
+        if (active == radio_com2) Serial.println("A12"); //com2
+        if (active == radio_nav1) Serial.println("A18"); //nav1
+        if (active == radio_nav2) Serial.println("A24"); //nav2
+        
+        if ( active == 18){ //adf
+          mark = (mark + 1);
+          if (mark == 13) mark = 14; // sort out for piont in ADF
+          active = 1;
+          if (mark > 14) mark = 10;
+        }
+      }
+      
+      if (pinNo == swt_gear){if (pinStateSTR == "0"){Serial.println ("C01");}else {Serial.println ("C02");}} // Gear DOWN
+      if (pinNo == swt_pbrk){if (pinStateSTR == "0"){Serial.println ("C040");}else {Serial.println ("C041");}} // Parking brake
+      if (pinNo == swt_splr){if (pinStateSTR == "0"){Serial.println ("C20");}else {Serial.println ("C21");}} // Auto spoiler
+       
+      if (pinNo == swt_nav){if (pinStateSTR == "1" ){Serial.println ("C411");}else {Serial.println ("C410");}} //Nav lights
+      if (pinNo == swt_bcn){if (pinStateSTR == "1" ){Serial.println ("C421");}else {Serial.println ("C420");}} //Beacon lights
+      if (pinNo == swt_ldn){if (pinStateSTR == "1" ){Serial.println ("C431");}else {Serial.println ("C430");}} //Landing lights
+      if (pinNo == swt_tax){if (pinStateSTR == "1" ){Serial.println ("C441");}else {Serial.println ("C440");}} //Taxi lights
+      if (pinNo == swt_stb){if (pinStateSTR == "1" ){Serial.println ("C451");}else {Serial.println ("C450");}} //Strobe lights
+      if (pinNo == swt_pnl){if (pinStateSTR == "1" ){Serial.println ("C461");}else {Serial.println ("C460");}} //Panel lights
+      if (pinNo == swt_rcg){if (pinStateSTR == "1" ){Serial.println ("C471");}else {Serial.println ("C470");}} //Recognitian lights
+      if (pinNo == swt_wng){if (pinStateSTR == "1" ){Serial.println ("C481");}else {Serial.println ("C480");}} //Wing lightsD
+      if (pinNo == swt_lgo){if (pinStateSTR == "1" ){Serial.println ("C491");}else {Serial.println ("C490");}} //Logo lights
+      if (pinNo == swt_cbn){if (pinStateSTR == "1" ){Serial.println ("C501");}else {Serial.println ("C500");}} //Cabin lights
+       
+     if (pinNo > swt_cbn){
+        Serial.print ("D"); 
+        if (pinNo < 10) Serial.print ("0");
+        Serial.print (pinNo);
+        Serial.println (pinStateSTR);
+      }
+    }
+    stringnewstate += pinStateSTR;
+  }
+  stringoldstate = stringnewstate;
+  delay(11);
+}
+
+/******************************************************************************************************************/
+void LCDMODE(){
   if (active != activeold) {
     activeold = active;  
   }
 
-  if (digitalRead(14)==0 and active != 14) { // Sets up the LCD when switching to Com1)
+  if (digitalRead(radio_com1)==0 and active != radio_com1) { // Sets up the LCD when switching to Com1)
     lcd.setCursor(0, 0);
     delay (11);
     lcd.print("Com.1    "); 
@@ -508,7 +701,7 @@ void LCDMODE() {
     active = 14;
   }
 
-  if (digitalRead(15)==0 and active != 15) {  // Sets up the LCD when switching to Com2)
+  if (digitalRead(radio_com2)==0 and active != radio_com2) {  // Sets up the LCD when switching to Com2)
     lcd.setCursor(0, 0);
     delay (11);
     lcd.print("Com.2    ");  
@@ -523,7 +716,7 @@ void LCDMODE() {
     active = 15;
   }
 
-  if (digitalRead(16)==0 and active != 16) {  // Sets up the LCD when switching to Nav1)
+  if (digitalRead(radio_nav1)==0 and active != radio_nav1) {  // Sets up the LCD when switching to Nav1)
     lcd.setCursor(0, 0);
     delay (11);
     lcd.print("Nav.1    ");  
@@ -538,7 +731,7 @@ void LCDMODE() {
     active = 16;
   }
 
-  if (digitalRead(17)==0 and active != 17) {  // Sets up the LCD when switching to Nav2)
+  if (digitalRead(radio_nav2)==0 and active != radio_nav2) {  // Sets up the LCD when switching to Nav2)
     lcd.setCursor(0, 0);
     delay (11);
     lcd.print("Nav.2    ");  
@@ -550,10 +743,10 @@ void LCDMODE() {
     lcd.setCursor(9, 1);
     delay (11);
     lcd.print(nav2sb);
-    active = 17;
+    active = radio_nav2;
   }   
 
-  if (digitalRead(18)==0 and active != 18) {  // Sets up the LCD when switching to ADF)
+  if (digitalRead(radio_adf)==0 and active != radio_adf) {  // Sets up the LCD when switching to ADF)
     lcd.setCursor(0, 0);
     delay (11);
     lcd.print("ADF      ");  
@@ -563,17 +756,13 @@ void LCDMODE() {
     lcd.print("  ");
     lcd.setCursor(0, 1);
     lcd.print("                ");
-
-    if (mark == 9 ){
-      mark = 10;
-    }
-    
+    if (mark == 9 ){mark = 10;}
     lcd.setCursor(mark, 1);
     lcd.print("-");
-    active = 18;             
+    active = radio_adf;             
   }
 
-  if (digitalRead(19)==0 and active != 19) {  // Sets up the LCD when switching to DME)
+  if (digitalRead(radio_dme)==0 and active != radio_dme) {  // Sets up the LCD when switching to DME)
     lcd.setCursor(0, 0);
     delay (11);
     lcd.print("DME1     ");  
@@ -586,574 +775,87 @@ void LCDMODE() {
     lcd.setCursor(9, 1);
     delay (11);
     lcd.print(dme2);
-    active = 19;
-  }
-
-  if (digitalRead(20)==0 and active != 20) {  // Sets up the LCD when switching to XPDR)
-    lcd.setCursor(0, 0);
-    delay (11);
-    lcd.print("XPonder  ");  
-    lcd.setCursor(9, 0);
-    delay (11);
-    lcd.print(xpdr); 
-    //lcd.print("    ");
-    lcd.setCursor(0, 1);
-    lcd.print("                ");
-    lcd.setCursor(mark, 1);
-    lcd.print("-");
-    active = 20;                   
-  }         
-} // end of LCDmode
-
-/******************************************************************************************************************/
-void EQUALS(){      // The first identifier was "="
-  
-  delay (11);
-  CodeIn = getChar(); // Get another character
-  
-  switch(CodeIn) {// Now lets find what to do with it
-  
-    case 'A'://Found the reading "Com1"
-    com1 = "";
-    com1 += getChar();
-    com1 += getChar();
-    com1 += getChar();
-    com1 += getChar();
-    com1 += getChar();
-    com1 += getChar();
-    com1 += getChar();
-
-    if (com1 != com1old && digitalRead(14) == LOW) {
-      delay (11);
-      lcd.setCursor(9, 0);
-      delay (11);
-      lcd.print(com1);
-      com1old = com1;
-    }
-    break;
-
-    case 'B': // Found the reading "Com1 s/b" 
-    com1sb = "";
-    com1sb += getChar();
-    com1sb += getChar();
-    com1sb += getChar();
-    com1sb += getChar();
-    com1sb += getChar();
-    com1sb += getChar();
-    com1sb += getChar();
-
-    if (com1sb != com1sbold && digitalRead(14) == LOW ){
-      delay (11);
-      lcd.setCursor(9, 1);
-      delay (11);
-      lcd.print(com1sb);
-      com1sbold = com1sb;
-    }        
-    break;
-
-    case  'C': //  Found the reading "Com2"
-    com2 = "";
-    com2 += getChar();
-    com2 += getChar();
-    com2 += getChar();
-    com2 += getChar();
-    com2 += getChar();
-    com2 += getChar();
-    com2 += getChar();
-
-    if (com2 != com2old && digitalRead(15) == LOW) {
-      lcd.setCursor(9, 0);
-      delay (11);
-      lcd.print(com2);
-      com2old = com2;
-    }
-    break;
-
-    case  'D': //  Found the reading "Com2 s/b"
-    com2sb = "";
-    com2sb += getChar();
-    com2sb += getChar();
-    com2sb += getChar();
-    com2sb += getChar();
-    com2sb += getChar();
-    com2sb += getChar();
-    com2sb += getChar();
-
-    if (com2sb != com2sbold && digitalRead(15) == LOW) {
-      lcd.setCursor(9, 1);
-      delay (11);
-      lcd.print(com2sb);
-      com2sbold = com2sb;
-    }
-    break;  
-
-    case  'E': //  Found the reading "Nav1"
-    delay (11);
-    nav1 = "";
-    nav1 += getChar();
-    nav1 += getChar();
-    nav1 += getChar();
-    nav1 += getChar();
-    nav1 += getChar();
-    nav1 += getChar();
-    nav1 += (" "); //pads it up to 8 caracters
-
-    if (nav1 != nav1old && digitalRead(16) == LOW) {
-      lcd.setCursor(9, 0);
-      delay (11);
-      lcd.print(nav1);
-      nav1old = nav1;
-    }
-    break;
-
-    case  'F': //  Found the reading "Nav1 s/b"
-    nav1sb = "";
-    nav1sb += getChar();
-    nav1sb += getChar();
-    nav1sb += getChar();
-    nav1sb += getChar();
-    nav1sb += getChar();
-    nav1sb += getChar();
-    nav1sb += (" "); //pads it up to 8 caracters
-
-    if (nav1sb != nav1sbold && digitalRead(16) == LOW) {
-      lcd.setCursor(9, 1);
-      delay (11);
-      lcd.print(nav1sb);
-      nav1sbold = nav1sb;
-    }              
-    break;
-
-    case  'G': //  Found the reading "Nav2"
-    delay (11);
-    nav2 = "";
-    nav2 += getChar();
-    nav2 += getChar();
-    nav2 += getChar();
-    nav2 += getChar();
-    nav2 += getChar();
-    nav2 += getChar();
-    nav2 += (" "); //pads it up to 8 caracters
-
-    if (nav2 != nav2old && digitalRead(17) == LOW) {
-      lcd.setCursor(9, 0);
-      delay (11);
-      lcd.print(nav2);
-      nav2old = nav2;
-    }
-    break;
-
-    case  'H': //  Found the reading "Nav2 s/b"
-    nav2sb = "";
-    nav2sb += getChar();
-    nav2sb += getChar();
-    nav2sb += getChar();
-    nav2sb += getChar();
-    nav2sb += getChar();
-    nav2sb += getChar();
-    nav2sb += (" "); //pads it up to 8 caracters
-
-    if (nav2sb != nav2sbold && digitalRead(17) == LOW) {
-      lcd.setCursor(9, 1);
-      delay (11);
-      lcd.print(nav2sb);
-      nav2sbold = nav2sb;
-    }              
-    break;
-
-    case  'I': //  Found the reading "ADF"
-    adf = "";
-    adf += getChar();
-    adf += getChar();
-    adf += getChar();
-    adf += getChar();
-    adf += getChar();
-    adf += getChar();
-    adf += (" "); //pads it up to 8 caracters
-    
-    if (adf != adfold && digitalRead(18) == LOW) {
-      lcd.setCursor(9, 0);
-      delay (11);
-      lcd.print(adf);
-      adfold = adf;
-    }
-    break;   
-
-    case  'J': //  Found the reading "XPDR"
-    delay (11);
-    xpdr = "";
-    xpdr += getChar();
-    xpdr += getChar();
-    xpdr += getChar();
-    xpdr += getChar();
-    xpdr += ("    "); //pads it up to 8 caracters
-
-    if (xpdr != xpdrold && digitalRead(20) == LOW) {
-      lcd.setCursor(9, 0);
-      delay (11);
-      lcd.print(xpdr);
-      xpdrold = xpdr;
-    }               
-    break;
-
-    case  'K': //  Found the reading "DME1"
-    delay (11);
-    dme1 = "";
-    dme1 += getChar();
-    dme1 += getChar();
-    dme1 += getChar();
-    dme1 += getChar();
-    dme1 += getChar();
-    dme1 += ("   "); //pads it up to 8 caracters
-
-    if (dme1 != dme1old && digitalRead(19) == LOW) {
-      lcd.setCursor(9, 0);
-      delay (11);
-      lcd.print(dme1);
-      dme1old = dme1;
-    }
-    break;
-
-    case  'L': //  Found the reading "DME2"
-    delay (11);
-    dme2 = "";
-    dme2 += getChar();
-    dme2 += getChar();
-    dme2 += getChar();
-    dme2 += getChar();
-    dme2 += getChar();
-    dme2 += ("   "); //pads it up to 8 caracters
-
-    if (dme2 != dme2old && digitalRead(19) == LOW) {
-      lcd.setCursor(9, 1);
-      delay (11);
-      lcd.print(dme2);
-      dme2old = dme2;
-    }
-    break;
-    
-    // Autopilot config
-    case 'a': // autopilot active
-      AnunAPa = String(getChar());
-      if (AnunAPa == "1") {
-        if (AnunAPax != "3") {
-          digitalWrite(63, HIGH);
-        }
-      } else {
-        digitalWrite(63, LOW);
-        AnunAPax = "0";
-      }
-    break;
-    
-    case 'b': // autopilot autitude set
-      delay (11);
-      Disp_alt[0] = getChar();
-      Disp_alt[1] = getChar();
-      Disp_alt[2] = getChar();
-      Disp_alt[3] = getChar();
-      tm1637_alt.display(Disp_alt);
-    break;
-    
-    case 'c': // autopilot vertical speed set
-      delay (11);
-      Disp_spd[0] = getChar();
-      Disp_spd[1] = getChar();
-      Disp_spd[2] = getChar();
-      Disp_spd[3] = getChar();
-      tm1637_spd.display(Disp_spd);
-    break;
-    
-    case 'd': // autopilot heading set
-      delay (11);
-      Disp_hdg[0] = getChar();
-      Disp_hdg[1] = getChar();
-      Disp_hdg[2] = getChar();
-      Disp_hdg[3] = getChar();
-      tm1637_hdg.display(Disp_hdg);
-    break;
+    active = radio_dme;
   }
 }
 
 /******************************************************************************************************************/
-// now the bit for the rotary encoder input
-void ROTARYS() {
-  
-  X = (QUAD_radio.position()/2);
-  if (X != Xold) { // checks to see if it different
-    (Xdif = (X-Xold));// finds out the difference
- 
-    if (active == 14){// Com1 rotary encoder output
-      if (Xdif == 1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A01");
-        } 
-        else Serial.println("A03");
-      }
-      if (Xdif == -1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A02");
-        } 
-        else Serial.println("A04");
-      }
-    }
-    if (active == 15){// Com2 rotary encoder output
-      if (Xdif == 1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A07");
-        } 
-        else Serial.println("A09");
-      }
-      if (Xdif == -1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A08");
-        } 
-        else Serial.println("A10");
-      }
-    }
-    if (active == 16){// Nav1 rotary encoder output
-      if (Xdif == 1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A13");
-        } 
-        else Serial.println("A15");
-      }
-      if (Xdif == -1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A14");
-        } 
-        else Serial.println("A16");
-      }
-    }
-    if (active == 17){// Nav2 rotary encoder output
-      if (Xdif == 1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A19");
-        } 
-        else Serial.println("A21");
-      }
-      if (Xdif == -1) {
-        if (digitalRead(10)==0 ) { 
-          Serial.println("A20");
-        } 
-        else Serial.println("A22");
-      }
-    }
-    if (active == 18){// ADF rotary encoder output
-      if (digitalRead(10)==0 ) {
-        if (Xdif == 1) { 
-          mark = (mark - 1);
-          active = 2; 
-          if (mark == 13) mark =12;
-        }
-        if (Xdif == -1){ 
-          mark = (mark + 1); 
-          active = 2;
-          if (mark == 13) mark =14;
-        }
-        if (mark > 14) mark = 14;
-        if (mark < 10) mark = 10;
-      }
-      else{
-        if (Xdif == 1) { 
-          if (mark == 10) {
-            Serial.println("A29"); 
-          }
-          if (mark == 11) {
-            Serial.println("A30"); 
-          }
-          if (mark == 12) {
-            Serial.println("A31"); 
-          }
-          if (mark == 14) {
-            Serial.println("A32"); 
-          }
-        }    
-        if (Xdif == -1){
-          if (mark == 10){
-            Serial.println("A25"); 
-          }  
-          if (mark == 11){
-            Serial.println("A26"); 
-          }  
-          if (mark == 12){
-            Serial.println("A27"); 
-          }  
-          if (mark == 14){
-            Serial.println("A28"); 
-          }  
-        } 
-      }
-    }
-    if (active == 20){// Xponder rotary encoder output
-      if (digitalRead(10)==0 ) {
-        if (Xdif == 1) { 
-          mark = (mark - 1);
-          active = 2; 
-        }
-        if (Xdif == -1){ 
-          mark = (mark + 1); 
-          active = 2;
-        }
-        if (mark > 12) mark = 12;
-        if (mark < 9) mark = 9;
-      }
-      else{
-        if (Xdif == 1) { 
-          if (mark == 9) {
-            Serial.println("A38"); 
-          }
-          if (mark == 10) {
-            Serial.println("A39"); 
-          }
-          if (mark == 11) {
-            Serial.println("A40"); 
-          }
-          if (mark == 12) {
-            Serial.println("A41"); 
-          }
-        }    
-        if (Xdif == -1){ 
-          if (mark == 9){
-            Serial.println("A34"); 
-          }  
-          if (mark == 10){
-            Serial.println("A35"); 
-          }  
-          if (mark == 11){
-            Serial.println("A36"); 
-          }  
-          if (mark == 12){
-            Serial.println("A37"); 
-          }  
-        } 
-      }    
-    }
+void ROTARYS(){
+  RADIO_ROTARY();
+}
 
-    if (QUAD_radio.position() > 1000){ // zero the rotary encoder count if too high or low
-      QUAD_radio.position(0);
-    }
-    if (QUAD_radio.position() < -1000){
-      QUAD_radio.position(0);
-    }
-    Xold = X; // overwrites the old reading with the new one.
-    }
-  }// end of rotarys
-  
-
-/******************************************************************************************************************/
-// Control all inputs
-void INPUTPINS(){
-  stringnewstate = "";
-  
-  // checks all the pins 10 to 53
-  for (int pinNo = 10; pinNo <= 53; pinNo++){
-  
-    pinStateSTR = String(digitalRead(pinNo)); 
-    oldpinStateSTR = "";
-    oldpinStateSTR += String(stringoldstate.charAt(pinNo - 10));
-
-    if (pinStateSTR != oldpinStateSTR) {// yes it's different
+void RADIO_ROTARY() {
+  radio_X = (QUAD_radio.position()/2);
+  if (radio_X != radio_Xold) {
+    (radio_Xdif = (radio_X - radio_Xold));
+    switch (active) {
+      case radio_com1: // COM1 rotary encoder output
+        if (radio_Xdif == 1){if (digitalRead(rot_radio03)==1) Serial.println("A01"); else Serial.println("A03");}
+        if (radio_Xdif == -1){if (digitalRead(rot_radio03)==1) Serial.println("A02"); else Serial.println("A04");}
+      break;
       
-      if (pinNo == 11 and pinStateSTR == "0") { //Change-over button is pressed
-        if (active == 14) Serial.println("A06");//com1
-        if (active == 15) Serial.println("A12");//com2
-        if (active == 16) Serial.println("A18");//nav1
-        if (active == 17) Serial.println("A24"); //nav2
-        
-        if ( active == 18){ //adf
-          mark = (mark + 1);
-          if (mark == 13){ 
-            mark = 14;
-          }// sort out for piont in ADF
-          active = 1;
-          if (mark > 14)mark = 10;
+      case radio_com2: // COM2 rotary encoder output
+        if (radio_Xdif == 1){if (digitalRead(rot_radio03)==1) Serial.println("A07"); else Serial.println("A09");}
+        if (radio_Xdif == -1){if (digitalRead(rot_radio03)==1) Serial.println("A08"); else Serial.println("A10");}
+      break;
+      
+      case radio_nav1: // NAV1 rotary encoder output
+        if (radio_Xdif == 1){if (digitalRead(rot_radio03)==1) Serial.println("A13"); else Serial.println("A15");}
+        if (radio_Xdif == -1){if (digitalRead(rot_radio03)==1) Serial.println("A14"); else Serial.println("A16");}
+      break;
+      
+      case radio_nav2: // NAV2 rotary encoder output
+        if (radio_Xdif == 1){if (digitalRead(rot_radio03)==1) Serial.println("A19"); else Serial.println("A21");}
+        if (radio_Xdif == -1){if (digitalRead(rot_radio03)==1) Serial.println("A20"); else Serial.println("A22");}
+      break;
+      
+      case radio_adf: // ADF rotary encoder output
+        if (digitalRead(rot_radio03)==1){
+          if (radio_Xdif == 1) {
+            mark = (mark - 1);
+            active = 2;
+            if (mark == 13) mark = 12;
+          }
+          if (radio_Xdif == -1){ 
+            mark = (mark + 1);
+            active = 2;
+            if (mark == 13) mark = 14;
+          }
+          if (mark > 14) mark = 14;
+          if (mark < 10) mark = 10;
+        } else {
+          if (radio_Xdif == 1) {
+            if (mark == 10) Serial.println("A29");
+            if (mark == 11) Serial.println("A30");
+            if (mark == 12) Serial.println("A31");
+            if (mark == 14) Serial.println("A32");
+          }
+          if (radio_Xdif == -1){
+            if (mark == 10) Serial.println("A25");
+            if (mark == 11) Serial.println("A26");
+            if (mark == 12) Serial.println("A27");
+            if (mark == 14) Serial.println("A28");
+          }
         }
-        
-        if  (active == 20){ //xponder
-          mark = (mark + 1);
-          if (mark == 13){ 
-            mark = 9;
-          }// sort out for length Xponder
-          active = 1;
-          if (mark > 12)mark = 12;
-        }
-
-      }// end of pin 11 sortout
-        if (pinNo == 22 && pinStateSTR == "0"){
-           {digitalWrite(65, LOW);}
-           if (AnunB == "1"){AnunBx = "3";}
-           if (AnunC == "1"){AnunCx = "3";}
-           if (AnunD == "1"){AnunDx = "3";}
-           //if (AnunE == "1"){AnunEx = "3";}
-           if (AnunH == "1"){AnunHx = "3";}
-           if (AnunAPa == "1"){AnunAPax = "3";}           
-        } // end of pin 22 sortout
-
-        if (pinNo == 23 && pinStateSTR == "0"){Serial.println ("C19");} // Trim adjust DOWN
-        if (pinNo == 24 && pinStateSTR == "0"){Serial.println ("C18");} // Trim adjust UP
-        if (pinNo == 25 && pinStateSTR == "0"){Serial.println ("C15");} // Flaps DOWN a bit
-        if (pinNo == 26 && pinStateSTR == "0"){Serial.println ("C14");} // Flaps UP a bit
-        
-        if (pinNo == 31 && pinStateSTR == "0"){Serial.println ("C01");} // Gear UP 
-        if (pinNo == 31 && pinStateSTR == "1"){Serial.println ("C02");} // Gear DOWN
-        
-        if (pinNo == 32 && pinStateSTR == "0"){Serial.println ("C040");} // Parking brake OFF 
-        if (pinNo == 32 && pinStateSTR == "1"){Serial.println ("C041");} // Parking brake ON
-        
-        if (pinNo == 33 && pinStateSTR == "1"){Serial.println ("C20");} // Auto spoiler ON
-        if (pinNo == 34 && pinStateSTR == "1"){Serial.println ("C21");} // Auto spoiler OFF
-        
-        // LIGHTS
-        if (pinNo == 41 && pinStateSTR == "1"){Serial.println ("C411");} // NAV ON
-        if (pinNo == 41 && pinStateSTR == "0"){Serial.println ("C410");} // NAV OFF
-        if (pinNo == 42 && pinStateSTR == "1"){Serial.println ("C421");} // Beacon ON
-        if (pinNo == 42 && pinStateSTR == "0"){Serial.println ("C420");} // Beacon OFF
-        if (pinNo == 43 && pinStateSTR == "1"){Serial.println ("C431");} // Landing ON
-        if (pinNo == 43 && pinStateSTR == "0"){Serial.println ("C430");} // Landing OFF
-        if (pinNo == 44 && pinStateSTR == "1"){Serial.println ("C441");} // Taxi ON
-        if (pinNo == 44 && pinStateSTR == "0"){Serial.println ("C440");} // Taxi OFF
-        if (pinNo == 45 && pinStateSTR == "1"){Serial.println ("C451");} // Strobe ON
-        if (pinNo == 45 && pinStateSTR == "0"){Serial.println ("C450");} // Strobe OFF
-        if (pinNo == 46 && pinStateSTR == "1"){Serial.println ("C461");} // Panel ON
-        if (pinNo == 46 && pinStateSTR == "0"){Serial.println ("C460");} // Panel OFF
-        if (pinNo == 47 && pinStateSTR == "1"){Serial.println ("C471");} // Recognation ON
-        if (pinNo == 47 && pinStateSTR == "0"){Serial.println ("C470");} // Recognation OFF
-        if (pinNo == 48 && pinStateSTR == "1"){Serial.println ("C481");} // Wing ON
-        if (pinNo == 48 && pinStateSTR == "0"){Serial.println ("C480");} // Wing OFF
-        if (pinNo == 49 && pinStateSTR == "1"){Serial.println ("C491");} // Logo ON
-        if (pinNo == 49 && pinStateSTR == "0"){Serial.println ("C490");} // Logo OFF
-        if (pinNo == 50 && pinStateSTR == "1"){Serial.println ("C501");} // Cabin ON
-        if (pinNo == 50 && pinStateSTR == "0"){Serial.println ("C500");} // Cabin OFF       
-
-        if (pinNo > 26){ // start of "Keys" bit
-          Serial.print ("D"); 
-          if (pinNo < 10) Serial.print ("0");
-          Serial.print (pinNo);
-          Serial.println (pinStateSTR);
-        } // end of "Keys" bit
-      }// end of "yes it's different"
-      stringnewstate += pinStateSTR;
-    }
-    stringoldstate = stringnewstate;
-    delay(11);
-}// end of inputpins
+        break;
+      }
+    if (QUAD_radio.position() > 1000) QUAD_radio.position(0);
+    if (QUAD_radio.position() < -1000) QUAD_radio.position(0);
+    radio_Xold = radio_X; // overwrites the old reading with the new one.
+  }
+}
 
 /******************************************************************************************************************/
-void PULSE_LEDs(){ // This void pulses the active LED's after pressing the 'Cancel' button
+void PULSE_LEDs(){
   TimeNow = millis();
   if(TimeNow - TimeStart > TimeInterval) {
-    TimeStart = TimeNow; 
+    TimeStart = TimeNow;
     pulseOn++;
-
     if (pulseOn > 1){pulseOn = 0;};
-    if (AnunBx == "3"){if (pulseOn == 1){digitalWrite(60, HIGH);}else{digitalWrite(60, LOW);}}
-    if (AnunCx == "3"){if (pulseOn == 1){digitalWrite(61, HIGH);}else{digitalWrite(61, LOW);}}
-    if (AnunDx == "3"){if (pulseOn == 1){digitalWrite(62, HIGH);}else{digitalWrite(62, LOW);}}
-    //if (AnunEx == "3"){if (pulseOn == 1){digitalWrite(63, HIGH);}else{digitalWrite(63, LOW);}}
-    if (AnunAPax == "3"){if (pulseOn == 1){digitalWrite(63, HIGH);}else{digitalWrite(63, LOW);}}
-    if (AnunHx == "3"){if (pulseOn == 1){digitalWrite(64, HIGH);}else{digitalWrite(64, LOW);}}
-  }//end of a time trigger
-}// end of pulse_led's void
-
-/******************************************************************************************************************/
-
+    if (AnunBx == "3"){if (pulseOn == 1){digitalWrite(led_war_flap, HIGH);}else{digitalWrite(led_war_flap, LOW);}}
+    if (AnunCx == "3"){if (pulseOn == 1){digitalWrite(led_war_gear, HIGH);}else{digitalWrite(led_war_gear, LOW);}}
+    if (AnunDx == "3"){if (pulseOn == 1){digitalWrite(led_war_frame, HIGH);}else{digitalWrite(led_war_frame, LOW);}}
+    if (AnunEx == "3"){if (pulseOn == 1){digitalWrite(led_war_stall, HIGH);}else{digitalWrite(led_war_stall, LOW);}}
+    if (AnunHx == "3"){if (pulseOn == 1){digitalWrite(led_war_fuel, HIGH);}else{digitalWrite(led_war_fuel, LOW);}}
+  }
+}
