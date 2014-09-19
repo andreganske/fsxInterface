@@ -169,6 +169,13 @@ String adf,
        dme1old,
        dme2,
        dme2old;
+       
+String hdg,
+       hdgold,
+       spd,
+       spdold,
+       alt,
+       altold;
 
 String AnunB = "0",
        AnunC = "0",
@@ -300,11 +307,11 @@ void EQUALS(){ // The first identifier is "="
      break;
      
      case 'd':// AP heading
-      Disp_hdg[0] = getChar();
-      Disp_hdg[1] = getChar();
-      Disp_hdg[2] = getChar();
-      Disp_hdg[3] = getChar();
-      
+       hdg = "";
+       hdg += getChar();
+       hdg += getChar();
+       hdg += getChar();
+       hdg += getChar();
       if (Disp_hdg[0] != Disp_hdgold[0] 
           || Disp_hdg[1] != Disp_hdgold[1] 
           || Disp_hdg[2] != Disp_hdgold[2] 
@@ -327,7 +334,7 @@ void EQUALS(){ // The first identifier is "="
        com1 += getChar();
        com1 += getChar();
        
-       if (com1 != com1old && digitalRead(14) == LOW) {
+       if (com1 != com1old && digitalRead(radio_com1) == LOW) {
          delay (11);
          lcd.setCursor(9, 0);
          delay (11);
@@ -346,7 +353,7 @@ void EQUALS(){ // The first identifier is "="
        com1sb += getChar();
        com1sb += getChar();
        
-       if (com1sb != com1sbold && digitalRead(14) == LOW ){
+       if (com1sb != com1sbold && digitalRead(radio_com1) == LOW ){
          delay (11);
          lcd.setCursor(9, 1);
          delay (11);
@@ -365,7 +372,7 @@ void EQUALS(){ // The first identifier is "="
        com2 += getChar();
        com2 += getChar();
        
-       if (com2 != com2old && digitalRead(15) == LOW) {
+       if (com2 != com2old && digitalRead(radio_com2) == LOW) {
          lcd.setCursor(9, 0);
          delay (11);
          lcd.print(com2);
@@ -383,7 +390,7 @@ void EQUALS(){ // The first identifier is "="
        com2sb += getChar();
        com2sb += getChar();
        
-       if (com2sb != com2sbold && digitalRead(15) == LOW) {
+       if (com2sb != com2sbold && digitalRead(radio_com2) == LOW) {
          lcd.setCursor(9, 1);
          delay (11);
          lcd.print(com2sb);
@@ -402,7 +409,7 @@ void EQUALS(){ // The first identifier is "="
        nav1 += getChar();
        nav1 += (" ");
        
-       if (nav1 != nav1old && digitalRead(16) == LOW) {
+       if (nav1 != nav1old && digitalRead(radio_nav1) == LOW) {
          lcd.setCursor(9, 0);
          delay (11);
          lcd.print(nav1);
@@ -420,7 +427,7 @@ void EQUALS(){ // The first identifier is "="
        nav1sb += getChar();
        nav1sb += (" ");
        
-       if (nav1sb != nav1sbold && digitalRead(16) == LOW) {
+       if (nav1sb != nav1sbold && digitalRead(radio_nav1) == LOW) {
          lcd.setCursor(9, 1);
          delay (11);
          lcd.print(nav1sb);
@@ -439,7 +446,7 @@ void EQUALS(){ // The first identifier is "="
        nav2 += getChar();
        nav2 += (" ");
        
-       if (nav2 != nav2old && digitalRead(17) == LOW) {
+       if (nav2 != nav2old && digitalRead(radio_nav2) == LOW) {
          lcd.setCursor(9, 0);
          delay (11);
          lcd.print(nav2);
@@ -457,7 +464,7 @@ void EQUALS(){ // The first identifier is "="
        nav2sb += getChar();
        nav2sb += (" ");
        
-       if (nav2sb != nav2sbold && digitalRead(17) == LOW) {
+       if (nav2sb != nav2sbold && digitalRead(radio_nav2) == LOW) {
          lcd.setCursor(9, 1);
          delay (11);
          lcd.print(nav2sb);
@@ -475,7 +482,7 @@ void EQUALS(){ // The first identifier is "="
        adf += getChar();
        adf += (" ");
        
-       if (adf != adfold && digitalRead(18) == LOW) {
+       if (adf != adfold && digitalRead(radio_adf) == LOW) {
          lcd.setCursor(9, 0);
          delay (11);
          lcd.print(adf);
@@ -493,7 +500,7 @@ void EQUALS(){ // The first identifier is "="
        dme1 += getChar();
        dme1 += ("   ");
        
-       if (dme1 != dme1old && digitalRead(19) == LOW) {
+       if (dme1 != dme1old && digitalRead(radio_dme) == LOW) {
          lcd.setCursor(9, 0);
          delay (11);
          lcd.print(dme1);
@@ -511,7 +518,7 @@ void EQUALS(){ // The first identifier is "="
        dme2 += getChar();
        dme2 += ("   ");
        
-       if (dme2 != dme2old && digitalRead(19) == LOW) {
+       if (dme2 != dme2old && digitalRead(radio_dme) == LOW) {
          lcd.setCursor(9, 1);
          delay (11);
          lcd.print(dme2);
@@ -643,11 +650,11 @@ void INPUTS(){
         if (active == radio_nav1) Serial.println("A18"); //nav1
         if (active == radio_nav2) Serial.println("A24"); //nav2
         
-        if ( active == 18){ //adf
+        if ( active == radio_adf){ //adf
           mark = (mark + 1);
-          if (mark == 13) mark = 14; // sort out for piont in ADF
+          if (mark == 13) mark = radio_com1; // sort out for piont in ADF
           active = 1;
-          if (mark > 14) mark = 10;
+          if (mark > radio_com1) mark = 10;
         }
       }
       
@@ -819,22 +826,22 @@ void RADIO_ROTARY() {
           if (radio_Xdif == -1){ 
             mark = (mark + 1);
             active = 2;
-            if (mark == 13) mark = 14;
+            if (mark == 13) mark = radio_com1;
           }
-          if (mark > 14) mark = 14;
+          if (mark > radio_com1) mark = radio_com1;
           if (mark < 10) mark = 10;
         } else {
           if (radio_Xdif == 1) {
             if (mark == 10) Serial.println("A29");
             if (mark == 11) Serial.println("A30");
             if (mark == 12) Serial.println("A31");
-            if (mark == 14) Serial.println("A32");
+            if (mark == radio_com1) Serial.println("A32");
           }
           if (radio_Xdif == -1){
             if (mark == 10) Serial.println("A25");
             if (mark == 11) Serial.println("A26");
             if (mark == 12) Serial.println("A27");
-            if (mark == 14) Serial.println("A28");
+            if (mark == radio_com1) Serial.println("A28");
           }
         }
         break;
