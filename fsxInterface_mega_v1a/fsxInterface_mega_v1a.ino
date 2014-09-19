@@ -13,6 +13,7 @@
  * include support to i2c LCD module
  * include support to TM1637 lcds modules
  */
+#include <Arduino.h>
 
 #include "math.h"
 #include <Wire.h>
@@ -20,8 +21,7 @@
 // Rotary encoders library, you can get some great stuff about here: http://www.jimspage.co.nz/encoders2.htm
 #include "Quadrature.h"
 
-// TM1637 lcds library, you can get this library here: http://www.seeedstudio.com/wiki/Grove_-_4-Digit_Display
-#include "TM1637.h"
+#include <TM1637Display.h>
 
 // Get the LCD I2C library here: https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads
 #include <LiquidCrystal_I2C.h>
@@ -32,12 +32,7 @@
 #define ON 1
 #define OFF 0
 
-int8_t Disp_alt[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_altold[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_hdg[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_hdgold[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_spd[] = {0x00,0x00,0x00,0x00};
-int8_t Disp_spdold[] = {0x00,0x00,0x00,0x00};
+const uint8_t disp_ap[] = {0x00,0x00,0x00,0x00};
 
 // define all pins 
 #define rot_radio01 8 // radio rotary encoder
@@ -112,9 +107,9 @@ Quadrature QUAD_spd(rot_hdg01, rot_hdg02);
 Quadrature QUAD_hdg(rot_spd01, rot_spd03);
 
 // set LCDs TM1637 addresses
-TM1637 tm1637_alt(lcd_clk, lcd_alt);
-TM1637 tm1637_hdg(lcd_clk, lcd_hdg);
-TM1637 tm1637_spd(lcd_clk, lcd_spd);
+TM1637Display tm1637_alt(lcd_clk, lcd_alt);
+TM1637Display tm1637_hdg(lcd_clk, lcd_hdg);
+TM1637Display tm1637_spd(lcd_clk, lcd_spd);
 
 int CodeIn,  // used on all serial reads
     pulseOn = 0,
@@ -196,27 +191,18 @@ unsigned long TimeNow = 0;
 unsigned long TimeInterval = 500;
 
 void lcdClear() {
-  tm1637_alt.clearDisplay();
-  tm1637_spd.clearDisplay();
-  tm1637_hdg.clearDisplay();
+  tm1637_alt.setBrightness(0x0f);
+  tm1637_spd.setBrightness(0x0f);
+  tm1637_hdg.setBrightness(0x0f);
+  
+  tm1637_alt.showNumberDec(0, true, 3, 0);
+  tm1637_spd.showNumberDec(0, true, 3, 0);
+  tm1637_hdg.showNumberDec(0, true, 3, 0);
+    
   lcd.clear();
 }
 
 void setup() {
-  
-  // set all TM1637 and init then
-  tm1637_alt.set();
-  tm1637_hdg.set();
-  tm1637_spd.set();
-
-  tm1637_alt.init();
-  tm1637_hdg.init();
-  tm1637_spd.init();
-  
-  // turn pointer off
-  tm1637_alt.point(POINT_OFF);
-  tm1637_hdg.point(POINT_OFF);
-  tm1637_spd.point(POINT_OFF);
  
   // initialize the lcd for 16 chars 2 lines, turn on backlight
   lcd.begin(16,2);
@@ -266,62 +252,80 @@ char getChar() {
   return((char)Serial.read());
 }
 
+int8_t convertString(char str) {
+  switch (str) {
+     case '0': return 0; break;
+     case '1': return 1; break;
+     case '2': return 2; break;
+     case '3': return 3; break;
+     case '4': return 4; break;
+     case '5': return 5; break;
+     case '6': return 6; break;
+     case '7': return 7; break;
+     case '8': return 8; break;
+     case '9': return 9; break;
+  }
+}
+
 /******************************************************************************************************************/
 void EQUALS(){ // The first identifier is "="
   CodeIn = getChar();
+  uint8_t data[] = { 0xff, 0xff, 0xff, 0xff };
+ 
   switch (CodeIn) {
-     case 'b': // AP altitude
-      Disp_alt[0] = getChar();
-      Disp_alt[1] = getChar();
-      Disp_alt[2] = getChar();
-      Disp_alt[3] = getChar();
+     case 'b':     // Autopilot ALT
+       alt = "";       
+       alt += getChar();
+       alt += getChar();
+       alt += getChar();
+       alt += getChar();
+       alt += getChar();
       
-      if (Disp_alt[0] != Disp_altold[0] 
-          || Disp_alt[1] != Disp_altold[1] 
-          || Disp_alt[2] != Disp_altold[2] 
-          || Disp_alt[3] != Disp_altold[3]) {
-        tm1637_alt.display(Disp_alt);
-        Disp_altold[0] = Disp_alt[0];
-        Disp_altold[1] = Disp_alt[1];
-        Disp_altold[2] = Disp_alt[2];
-        Disp_altold[3] = Disp_alt[3];
-      }
+       data[0] = tm1637_alt.encodeDigit(alt[0]-'0');
+       data[1] = tm1637_alt.encodeDigit(alt[1]-'0');
+       data[2] = tm1637_alt.encodeDigit(alt[2]-'0');
+       data[3] = tm1637_alt.encodeDigit(alt[3]-'0');
+     
+       if (alt != altold) {
+         tm1637_alt.setSegments(data, 4, 0);
+         altold = alt;
+       }
      break;
      
-     case 'c': // AP speed
-      Disp_spd[0] = getChar();
-      Disp_spd[1] = getChar();
-      Disp_spd[2] = getChar();
-      Disp_spd[3] = getChar();
+     case 'c':     // Autopilot SPD
+       spd = "";       
+       spd += getChar();
+       spd += getChar();
+       spd += getChar();
+       spd += getChar();
       
-      if (Disp_spd[0] != Disp_spdold[0] 
-          || Disp_spd[1] != Disp_spdold[1] 
-          || Disp_spd[2] != Disp_spdold[2] 
-          || Disp_spd[3] != Disp_spdold[3]) {
-        tm1637_alt.display(Disp_spd);
-        Disp_spdold[0] = Disp_spd[0];
-        Disp_spdold[1] = Disp_spd[1];
-        Disp_spdold[2] = Disp_spd[2];
-        Disp_spdold[3] = Disp_spd[3];
-      }
+       data[0] = tm1637_spd.encodeDigit(0);
+       data[1] = tm1637_spd.encodeDigit(spd[0]-'0');
+       data[2] = tm1637_spd.encodeDigit(spd[1]-'0');
+       data[3] = tm1637_spd.encodeDigit(spd[2]-'0');
+     
+       if (spd != spdold) {
+         tm1637_spd.setSegments(data, 4, 0);
+         spdold = spd;
+       }
      break;
      
-     case 'd':// AP heading
-       hdg = "";
+     case 'd':     // Autopilot HDG
+       hdg = "";       
        hdg += getChar();
        hdg += getChar();
        hdg += getChar();
        hdg += getChar();
-      if (Disp_hdg[0] != Disp_hdgold[0] 
-          || Disp_hdg[1] != Disp_hdgold[1] 
-          || Disp_hdg[2] != Disp_hdgold[2] 
-          || Disp_hdg[3] != Disp_hdgold[3]) {
-        tm1637_alt.display(Disp_hdg);
-        Disp_hdgold[0] = Disp_hdg[0];
-        Disp_hdgold[1] = Disp_hdg[1];
-        Disp_hdgold[2] = Disp_hdg[2];
-        Disp_hdgold[3] = Disp_hdg[3];
-      }
+      
+       data[0] = tm1637_hdg.encodeDigit(0);
+       data[1] = tm1637_hdg.encodeDigit(hdg[0]-'0');
+       data[2] = tm1637_hdg.encodeDigit(hdg[1]-'0');
+       data[3] = tm1637_hdg.encodeDigit(hdg[2]-'0');
+     
+       if (hdg != hdgold) {
+         tm1637_hdg.setSegments(data, 4, 0);
+         hdgold = hdg;
+       }
      break;
      
      case 'A':     // NAV1
@@ -688,6 +692,7 @@ void INPUTS(){
 
 /******************************************************************************************************************/
 void LCDMODE(){
+  
   if (active != activeold) {
     activeold = active;  
   }
