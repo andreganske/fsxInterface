@@ -698,7 +698,7 @@ void LCDMODE(){
     lcd.setCursor(9, 1);
     delay (11);
     lcd.print(com1sb); 
-    active = 14;
+    active = radio_com1;
   }
 
   if (digitalRead(radio_com2)==0 and active != radio_com2) {  // Sets up the LCD when switching to Com2)
@@ -713,7 +713,7 @@ void LCDMODE(){
     lcd.setCursor(9, 1);
     delay (11);
     lcd.print(com2sb);
-    active = 15;
+    active = radio_com2;
   }
 
   if (digitalRead(radio_nav1)==0 and active != radio_nav1) {  // Sets up the LCD when switching to Nav1)
@@ -728,7 +728,7 @@ void LCDMODE(){
     lcd.setCursor(9, 1);
     delay (11);
     lcd.print(nav1sb);
-    active = 16;
+    active = radio_nav1;
   }
 
   if (digitalRead(radio_nav2)==0 and active != radio_nav2) {  // Sets up the LCD when switching to Nav2)
