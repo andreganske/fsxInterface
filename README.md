@@ -1,6 +1,8 @@
 fsxInterface
 ============
 
+
+<br><br>
 Getting started
 ------------
 
@@ -16,7 +18,8 @@ If you dont know some of that stuff please read the links below before continue:
 * [Arduino examples and tutorials](http://arduino.cc/en/Tutorial/HomePage)
 * [Link2FS home page](http://www.jimspage.co.nz/intro.htm)
 * [Link2FS to FSX](http://www.jimspage.co.nz/Link2fs_Multi.htm)
-	
+
+<br><br>
 Installation
 ------------
 
@@ -28,14 +31,14 @@ more information here: [arduino MEGA] (http://arduino.cc/en/Main/arduinoBoardMeg
 <h4>On Link2FS</h4>
 In order to use all functionalities of this file on your Link2FS, you will need to enable the following options:
 
-
-
+<br><br>
 Whats is supported
 ------------
 
 This version of code provides support to many extraction from MSFS.
 All test was if 
 
+<br><br>
 Connections to the board
 ------------
 
@@ -105,7 +108,7 @@ was declered by define on the beging, as follow:
 	#define led_war_fuel 64 // LED warning total fuel
 	#define buz_warning 65 // Buzzer Master warning
 ```
-
+<br><br>
 TODOs
 ------------
 
