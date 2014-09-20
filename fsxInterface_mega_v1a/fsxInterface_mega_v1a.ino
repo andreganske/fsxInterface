@@ -21,6 +21,7 @@
 // Rotary encoders library, you can get some great stuff about here: http://www.jimspage.co.nz/encoders2.htm
 #include "Quadrature.h"
 
+// TM1637 lcds library, you can get this library here: https://github.com/avishorp/TM1637
 #include <TM1637Display.h>
 
 // Get the LCD I2C library here: https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads
@@ -292,7 +293,7 @@ void EQUALS(){ // The first identifier is "="
        }
      break;
      
-     case 'c':     // Autopilot SPD
+     case 'f':     // Autopilot SPD
        spd = "";       
        spd += getChar();
        spd += getChar();
