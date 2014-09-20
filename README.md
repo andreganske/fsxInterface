@@ -1,28 +1,40 @@
 fsxInterface
 ============
 
-Installation
+Getting started
 ------------
+
 This code make the interface between Link2FS and Arduino MEGA board.
 Before use this, you need to know some things, like:
-	* how Arduino works and how to use it;
-	* how to upload files to Arduino board;
-	* how to use Link2FS from Jim - very thank for this work Jim!;
+- how Arduino works and how to use it;
+- how to upload files to Arduino board;
+- how to use Link2FS from Jim - very thank for this work Jim!;
 	
 If you dont know some of that stuff please read the links below before continue:
-
-	[Getting Started with Arduino] (http://arduino.cc/en/Guide/HomePage)
-	[Arduino Environment basics] (http://arduino.cc/en/Guide/Environment)
-	[Arduino examples and tutorials] (http://arduino.cc/en/Tutorial/HomePage)
-	[Link2FS home page] (http://www.jimspage.co.nz/intro.htm)
-	[Link2FS to FSX] (http://www.jimspage.co.nz/Link2fs_Multi.htm)
+* [Getting Started with Arduino](http://arduino.cc/en/Guide/HomePage)
+* [Arduino Environment basics](http://arduino.cc/en/Guide/Environment)
+* [Arduino examples and tutorials](http://arduino.cc/en/Tutorial/HomePage)
+* [Link2FS home page](http://www.jimspage.co.nz/intro.htm)
+* [Link2FS to FSX](http://www.jimspage.co.nz/Link2fs_Multi.htm)
 	
 Installation
 ------------
 
+<h4>On arduino board</h4>
 To install this file, just upload it to your board.
 It was tested and works perfectly in Arduino MEGA 2560, 
-more information here: [arduino MEGA] (http://arduino.cc/en/Main/arduinoBoardMega2560)
+more information here: [arduino MEGA] (http://arduino.cc/en/Main/arduinoBoardMega2560).<br>
+
+<h4>On Link2FS</h4>
+In order to use all functionalities of this file on your Link2FS, you will need to enable the following options:
+
+
+
+Whats is supported
+------------
+
+This version of code provides support to many extraction from MSFS.
+All test was if 
 
 Connections to the board
 ------------
@@ -93,3 +105,10 @@ was declered by define on the beging, as follow:
 	#define led_war_fuel 64 // LED warning total fuel
 	#define buz_warning 65 // Buzzer Master warning
 ```
+
+TODOs
+------------
+
+ - [x] Support to LM1637 LCDs to show alt, hdg and spd autopilot;
+ - [ ] Support for more than one rotary encoder, to set alt, hdg and spd autopilot;
+ - [ ] Support to time in flight
