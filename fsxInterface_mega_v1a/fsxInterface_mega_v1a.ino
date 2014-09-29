@@ -808,8 +808,8 @@ void ALT_ROTARY() {
     if (alt_Xdif == -1) Serial.println("B12");
   }
   
-  if (QUAD_alt.position() > 1000) QUAD_radio.position(0);
-  if (QUAD_alt.position() < -1000) QUAD_radio.position(0);
+  if (QUAD_alt.position() > 1000) QUAD_alt.position(0);
+  if (QUAD_alt.position() < -1000) QUAD_alt.position(0);
   alt_Xold = alt_X;
 }
 
