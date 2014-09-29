@@ -817,8 +817,8 @@ void HDG_ROTARY() {
   hdg_X = (QUAD_hdg.position()/2);
   if(hdg_X != hdg_Xold) {
     hdg_Xdif = (hdg_X - hdg_Xold);
-    if (hdg_Xdif == 1) Serial.println("B11");
-    if (hdg_Xdif == -1) Serial.println("B12");
+    if (hdg_Xdif == 1) Serial.println("A57");
+    if (hdg_Xdif == -1) Serial.println("A58");
   }
   
   if (QUAD_hdg.position() > 1000) QUAD_hdg.position(0);
