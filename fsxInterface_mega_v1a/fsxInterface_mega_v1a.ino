@@ -826,7 +826,18 @@ void HDG_ROTARY() {
   hdg_Xold = hdg_X;
 }
 
-void SPD_ROTARY() {}
+void SPD_ROTARY() {
+  spd_X = (QUAD_spd.position()/2);
+  if(spd_X != spd_Xold) {
+    spd_Xdif = (spd_X - spd_Xold);
+    if (spd_Xdif == 1) Serial.println("B15");
+    if (spd_Xdif == -1) Serial.println("B16");
+  }
+  
+  if (QUAD_spd.position() > 1000) QUAD_spd.position(0);
+  if (QUAD_spd.position() < -1000) QUAD_spd.position(0);
+  spd_Xold = spd_X;
+}
   
 void RADIO_ROTARY() {
   radio_X = (QUAD_radio.position()/2);
