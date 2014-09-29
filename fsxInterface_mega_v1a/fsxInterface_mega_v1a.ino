@@ -813,7 +813,18 @@ void ALT_ROTARY() {
   alt_Xold = alt_X;
 }
 
-void HDG_ROTARY() {}
+void HDG_ROTARY() {
+  hdg_X = (QUAD_hdg.position()/2);
+  if(hdg_X != hdg_Xold) {
+    hdg_Xdif = (hdg_X - hdg_Xold);
+    if (hdg_Xdif == 1) Serial.println("B11");
+    if (hdg_Xdif == -1) Serial.println("B12");
+  }
+  
+  if (QUAD_hdg.position() > 1000) QUAD_hdg.position(0);
+  if (QUAD_hdg.position() < -1000) QUAD_hdg.position(0);
+  hdg_Xold = hdg_X;
+}
 
 void SPD_ROTARY() {}
   
