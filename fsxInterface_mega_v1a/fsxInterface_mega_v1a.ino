@@ -795,8 +795,28 @@ void LCDMODE(){
 /******************************************************************************************************************/
 void ROTARYS(){
   RADIO_ROTARY();
+  ALT_ROTARY();
+  HDG_ROTARY();
+  SPD_ROTARY();
 }
 
+void ALT_ROTARY() {
+  alt_X = (QUAD_alt.position()/2);
+  if(alt_X != alt_Xold) {
+    alt_Xdif = (alt_X - alt_Xold);
+    if (alt_Xdif == 1) Serial.println("B11");
+    if (alt_Xdif == -1) Serial.println("B12");
+  }
+  
+  if (QUAD_alt.position() > 1000) QUAD_radio.position(0);
+  if (QUAD_alt.position() < -1000) QUAD_radio.position(0);
+  alt_Xold = alt_X;
+}
+
+void HDG_ROTARY() {}
+
+void SPD_ROTARY() {}
+  
 void RADIO_ROTARY() {
   radio_X = (QUAD_radio.position()/2);
   if (radio_X != radio_Xold) {
